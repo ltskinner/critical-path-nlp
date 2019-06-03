@@ -30,6 +30,7 @@ import data.tokenization as tokenization
 from data.squad_data import read_squad_examples, write_squad_predictions
 from data.squad_data import FeatureWriter, convert_examples_to_features
 from models.squad_model import input_fn_builder, model_fn_builder
+from configs import set
 
 import six
 import tensorflow as tf
@@ -55,50 +56,45 @@ RawResult = collections.namedtuple("RawResult",
 # TODO: First test just try and pred!!! Do NOT start a training session
 
 
-def validate_flags_or_throw(bert_config):
-    """Validate the input FLAGS or throw an exception."""
-    tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
-                                                  FLAGS.init_checkpoint)
-
-    if not FLAGS.do_train and not FLAGS.do_predict:
-        raise ValueError("At least one of `do_train` or `do_predict`" +
-                         " must be True.")
-
-    if FLAGS.do_train:
-        if not FLAGS.train_file:
-            raise ValueError(
-                "If `do_train` is True, then `train_file` must be specified.")
-    if FLAGS.do_predict:
-        if not FLAGS.predict_file:
-            raise ValueError(
-                "If `do_predict` is True," +
-                " then `predict_file` must be specified.")
-
-    if FLAGS.max_seq_length > bert_config.max_position_embeddings:
-        raise ValueError(
-            "Cannot use sequence length %d because the BERT model "
-            "was only trained up to sequence length %d" %
-            (FLAGS.max_seq_length, bert_config.max_position_embeddings))
-
-    if FLAGS.max_seq_length <= FLAGS.max_query_length + 3:
-        raise ValueError(
-            "The max_seq_length (%d) must be greater than max_query_length "
-            "(%d) + 3" % (FLAGS.max_seq_length, FLAGS.max_query_length))
-
 
 def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
 
+    # Base BERT model folder path
+    base_model_folder_path = "C:/Users/Angus/models/uncased_L-12_H-768_A-12"
+
+    # Standard BERT config file name
+    name_of_config_json_file = "bert_config.json"
+
+    # Standard BERT vocab file name
+    name_of_vocab_file = "vocab.txt"
+
+    # Folder for output to be written to
+    output_folder_path = base_model_folder_path + "/trained"
+
+    user_configs = {
+        'bert_config_file': name_of_config_json_file,
+        'vocab_file': name_of_vocab_file,
+        'output_dir': output_folder_path,
+        'set_max_seq_length': 128
+    }
+
+    run_flags = set_user_flags(user_configs)
+
+    # Configuration
     # TODO: Modify configuration specification
-    bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
+    bert_config = modeling.BertConfig.from_json_file(
+        run_flags.bert_config_file)
 
     # TODO: Change to validate_bert_configurations
-    validate_flags_or_throw(bert_config)
+    validate_flags_or_throw(bert_config, FLAGS)
 
     tf.gfile.MakeDirs(FLAGS.output_dir)
 
-    tokenizer = tokenization.FullTokenizer(
-        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
+
+
+
+    # Start processing
 
     # TODO: Wrap TPU handling
     tpu_cluster_resolver = None
@@ -134,6 +130,7 @@ def main(_):
         rng = random.Random(12345)
         rng.shuffle(train_examples)
 
+    # Model initialization
     model_fn = model_fn_builder(
         bert_config=bert_config,
         init_checkpoint=FLAGS.init_checkpoint,
@@ -151,6 +148,11 @@ def main(_):
         config=run_config,
         train_batch_size=FLAGS.train_batch_size,
         predict_batch_size=FLAGS.predict_batch_size)
+
+    tokenizer = tokenization.FullTokenizer(
+        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
+
+
 
     # TODO: Wrat this in data loading routine
     if FLAGS.do_train:
@@ -182,6 +184,12 @@ def main(_):
             is_training=True,
             drop_remainder=True)
         estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+
+
+
+
+
+
 
     # TODO: Wrap prediction routine
     if FLAGS.do_predict:
@@ -236,6 +244,8 @@ def main(_):
                     start_logits=start_logits,
                     end_logits=end_logits))
 
+
+        # Save results
         output_prediction_file = os.path.join(FLAGS.output_dir,
                                               "predictions.json")
         output_nbest_file = os.path.join(FLAGS.output_dir,
@@ -248,6 +258,9 @@ def main(_):
                                 FLAGS.do_lower_case, output_prediction_file,
                                 output_nbest_file, output_null_log_odds_file,
                                 is_squad_v2=)
+
+
+
 
 
 if __name__ == "__main__":
