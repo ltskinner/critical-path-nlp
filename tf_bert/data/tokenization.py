@@ -27,7 +27,7 @@ import tensorflow as tf
 print("in tokenizer")
 
 
-def validate_case_matches_checkpoint(do_lower_case, init_checkpoint):
+def validate_word_cases(do_lower_case, init_checkpoint):
   """Checks whether the casing config is consistent with the checkpoint name."""
 
   # The casing has to be passed in by the user and there is no explicit check
