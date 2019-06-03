@@ -24,22 +24,24 @@ import math
 import os
 import random
 
-import models.modeling as modeling
+# Not sure if 'modeling' needs to be imported as a whole
+from models.modeling import BertConfig
+#import models.modeling as modeling
+
 import models.optimization as optimization
 import data.tokenization as tokenization
 from data.squad_data import read_squad_examples, write_squad_predictions
 from data.squad_data import FeatureWriter, convert_examples_to_features
 from models.squad_model import input_fn_builder, model_fn_builder
-from configs import set
+from configs.config_squad import ConfigSQuAD
 
 import six
 import tensorflow as tf
 
-# flags = tf.flags
-# FLAGS = flags.FLAGS
+
 
 # TODO: Load configs
-
+FLAGS = None
 
 
 
@@ -72,22 +74,41 @@ def main(_):
     # Folder for output to be written to
     output_folder_path = base_model_folder_path + "/trained"
 
-    user_configs = {
-        'bert_config_file': name_of_config_json_file,
-        'vocab_file': name_of_vocab_file,
-        'output_dir': output_folder_path,
-        'set_max_seq_length': 128
-    }
+    Flags = ConfigSQuAD()
+    Flags.set_tpu_gpu()
+    Flags.set_run_configs()
 
-    run_flags = set_user_flags(user_configs)
+    Flags.set_task(
+        # do_train=True,
+        do_predict=True)
+
+    Flags.set_paths(
+        bert_config_file=name_of_config_json_file,
+        bert_vocab_file=name_of_vocab_file,
+        bert_output_dir=output_folder_path,
+
+        # file_to_train=squad_10_path, # Need to figure out path vs folder
+        file_to_predict=squad_test_path)
+
+    Flags.set_training_params(
+        max_seq_length=69,
+        max_answer_length=45)
+
+    Flags.validate_flags_and_config()
+    # TODO: unglobalize this (if possible)
+    FLAGS = Flags.flags.FLAGS
+
 
     # Configuration
     # TODO: Modify configuration specification
-    bert_config = modeling.BertConfig.from_json_file(
-        run_flags.bert_config_file)
+    #bert_config = modeling.BertConfig.from_json_file(
+    #    run_flags.bert_config_file)
+    bert_config = BertConfig.from_json_file(run_flags.bert_config_file)
+    bert_config.validate_input_size(FLAGS)
 
-    # TODO: Change to validate_bert_configurations
-    validate_flags_or_throw(bert_config, FLAGS)
+    tokenization.validate_word_cases(FLAGS.do_lower_case, 
+                                     FLAGS.init_checkpoint)
+
 
     tf.gfile.MakeDirs(FLAGS.output_dir)
 
