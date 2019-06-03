@@ -22,6 +22,11 @@ import tokenization
 import six
 import tensorflow as tf
 
+import test
+
+print("[!] Importing squad_data, may need to pass 'FLAGS' for access to")
+print("... FLAGS.is_squad_v2, among other flags.")
+
 
 class SquadExample(object):
     """A single training/test example for simple sequence classification.
@@ -134,7 +139,7 @@ class FeatureWriter(object):
         self._writer.close()
 
 
-def read_squad_examples(input_file, is_training, is_squad_v2=False):
+def read_squad_examples(input_file, is_training):
     """Read a SQuAD json file into a list of SquadExample."""
     with tf.gfile.Open(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
@@ -171,7 +176,7 @@ def read_squad_examples(input_file, is_training, is_squad_v2=False):
             is_impossible = False
             if is_training:
 
-                if is_squad_v2:  # FLAGS.version_2_with_negative
+                if FLAGS.is_squad_v2:  # FLAGS.version_2_with_negative
                     is_impossible = qa["is_impossible"]
                 if (len(qa["answers"]) != 1) and (not is_impossible):
                     raise ValueError(
@@ -467,10 +472,9 @@ def _check_is_max_context(doc_spans, cur_span_index, position):
 
 
 def write_squad_predictions(all_examples, all_features, all_results, 
-                            n_best_size, max_answer_length, do_lower_case, 
+                            n_best_size, max_answer_length, do_lower_case,
                             output_prediction_file,
-                            output_nbest_file, output_null_log_odds_file,
-                            is_squad_v2=False):
+                            output_nbest_file, output_null_log_odds_file):
     """Write final predictions to the json file and log-odds of null if needed.
     """
     tf.logging.info("Writing predictions to: %s" % (output_prediction_file))
@@ -508,7 +512,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
             end_indexes = _get_best_indexes(result.end_logits, n_best_size)
             # if we could have irrelevant answers, get the min score of
             # irrelevant
-            if is_squad_v2:
+            if FLAGS.is_squad_v2:
                 feature_null_score = (
                     result.start_logits[0] + result.end_logits[0])
                 if feature_null_score < score_null:
@@ -546,7 +550,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
                             start_logit=result.start_logits[start_index],
                             end_logit=result.end_logits[end_index]))
 
-        if is_squad_v2:
+        if FLAGS.is_squad_v2:
             prelim_predictions.append(
                 _PrelimPrediction(
                     feature_index=min_null_feature_index,
@@ -603,7 +607,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
                     end_logit=pred.end_logit))
 
         # if we didn't inlude the empty option in the n-best, inlcude it
-        if is_squad_v2:
+        if FLAGS.is_squad_v2:
             if "" not in seen_predictions:
                 nbest.append(
                     _NbestPrediction(
@@ -638,7 +642,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
 
         assert len(nbest_json) >= 1
 
-        if not is_squad_v2:
+        if not FLAGS.is_squad_v2:
             all_predictions[example.qas_id] = nbest_json[0]["text"]
         else:
             # predict "" iff the null score - the score of best non-null >
@@ -659,7 +663,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
     with tf.gfile.GFile(output_nbest_file, "w") as writer:
         writer.write(json.dumps(all_nbest_json, indent=4) + "\n")
 
-    if is_squad_v2:
+    if FLAGS.is_squad_v2:
         with tf.gfile.GFile(output_null_log_odds_file, "w") as writer:
             writer.write(json.dumps(scores_diff_json, indent=4) + "\n")
 
