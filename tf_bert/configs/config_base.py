@@ -17,10 +17,6 @@
 import tensorflow as tf
 
 
-flags = tf.flags
-FLAGS = flags.FLAGS
-
-
 class ConfigBase(object):
     """Configuration flags required in all BERT implementations"""
 
