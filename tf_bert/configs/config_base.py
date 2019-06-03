@@ -7,7 +7,7 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 
 
-class ConfigGeneral(object):
+class ConfigBase(object):
     def __init__(self,
                  # File paths
                  bert_config_file=None,

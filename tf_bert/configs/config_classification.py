@@ -1,8 +1,8 @@
 
 import tensorflow as tf
 
-flags = tf.flags
-FLAGS = flags.FLAGS
+# flags = tf.flags
+# FLAGS = flags.FLAGS
 
 
 # Task configuration
