@@ -102,6 +102,13 @@ class BertConfig(object):
     """Serializes this instance to a JSON string."""
     return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
 
+  def validate_input_size(self, FLAGS):
+    if FLAGS.max_seq_length > self.max_position_embeddings:
+      raise ValueError(
+        "Cannot use sequence length %d because the BERT model "
+        "was only trained up to sequence length %d" %
+        (FLAGS.max_seq_length, self.max_position_embeddings))
+
 
 class BertModel(object):
   """BERT model ("Bidirectional Encoder Representations from Transformers").
