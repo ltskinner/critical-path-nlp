@@ -17,7 +17,7 @@ import collections
 import json
 import math
 
-import tokenization
+from data import tokenization
 
 import six
 import tensorflow as tf
@@ -139,7 +139,8 @@ class FeatureWriter(object):
         self._writer.close()
 
 
-def read_squad_examples(input_file, is_training):
+def read_squad_examples(input_file, is_training,
+                        is_squad_v2=False):
     """Read a SQuAD json file into a list of SquadExample."""
     with tf.gfile.Open(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
@@ -176,7 +177,7 @@ def read_squad_examples(input_file, is_training):
             is_impossible = False
             if is_training:
 
-                if FLAGS.is_squad_v2:  # FLAGS.version_2_with_negative
+                if is_squad_v2:  # FLAGS.version_2_with_negative
                     is_impossible = qa["is_impossible"]
                 if (len(qa["answers"]) != 1) and (not is_impossible):
                     raise ValueError(
@@ -209,15 +210,15 @@ def read_squad_examples(input_file, is_training):
                 end_position = -1
                 orig_answer_text = ""
 
-        example = SquadExample(
-            qas_id=qas_id,
-            question_text=question_text,
-            doc_tokens=doc_tokens,
-            orig_answer_text=orig_answer_text,
-            start_position=start_position,
-            end_position=end_position,
-            is_impossible=is_impossible)
-        examples.append(example)
+            example = SquadExample(
+                qas_id=qas_id,
+                question_text=question_text,
+                doc_tokens=doc_tokens,
+                orig_answer_text=orig_answer_text,
+                start_position=start_position,
+                end_position=end_position,
+                is_impossible=is_impossible)
+            examples.append(example)
 
     return examples
 
@@ -252,13 +253,14 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             tok_end_position = -1
         if is_training and not example.is_impossible:
             tok_start_position = orig_to_tok_index[example.start_position]
-        if example.end_position < len(example.doc_tokens) - 1:
-            tok_end_position = orig_to_tok_index[example.end_position + 1] - 1
-        else:
-            tok_end_position = len(all_doc_tokens) - 1
-            (tok_start_position, tok_end_position) = _improve_answer_span(
-                all_doc_tokens, tok_start_position, tok_end_position,
-                tokenizer, example.orig_answer_text)
+            if example.end_position < len(example.doc_tokens) - 1:
+                tok_end_position = orig_to_tok_index[
+                    example.end_position + 1] - 1
+            else:
+                tok_end_position = len(all_doc_tokens) - 1
+                (tok_start_position, tok_end_position) = _improve_answer_span(
+                    all_doc_tokens, tok_start_position, tok_end_position,
+                    tokenizer, example.orig_answer_text)
 
         # The -3 accounts for [CLS], [SEP] and [SEP]
         max_tokens_for_doc = max_seq_length - len(query_tokens) - 3
@@ -370,10 +372,11 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                 if is_training and not example.is_impossible:
                     answer_text = " ".join(
                         tokens[start_position:(end_position + 1)])
-                tf.logging.info("start_position: %d" % (start_position))
-                tf.logging.info("end_position: %d" % (end_position))
-                tf.logging.info(
-                    "answer: %s" % (tokenization.printable_text(answer_text)))
+                    tf.logging.info("start_position: %d" % (start_position))
+                    tf.logging.info("end_position: %d" % (end_position))
+                    tf.logging.info(
+                        "answer: %s" % 
+                        (tokenization.printable_text(answer_text)))
 
             feature = InputFeatures(
                 unique_id=unique_id,
@@ -471,10 +474,13 @@ def _check_is_max_context(doc_spans, cur_span_index, position):
     return cur_span_index == best_span_index
 
 
-def write_squad_predictions(all_examples, all_features, all_results, 
+def write_squad_predictions(all_examples, all_features, all_results,
                             n_best_size, max_answer_length, do_lower_case,
                             output_prediction_file,
-                            output_nbest_file, output_null_log_odds_file):
+                            output_nbest_file, output_null_log_odds_file,
+                            is_squad_v2=False,
+                            null_score_diff_threshold=0.0,
+                            verbose_logging=False):
     """Write final predictions to the json file and log-odds of null if needed.
     """
     tf.logging.info("Writing predictions to: %s" % (output_prediction_file))
@@ -512,7 +518,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
             end_indexes = _get_best_indexes(result.end_logits, n_best_size)
             # if we could have irrelevant answers, get the min score of
             # irrelevant
-            if FLAGS.is_squad_v2:
+            if is_squad_v2:
                 feature_null_score = (
                     result.start_logits[0] + result.end_logits[0])
                 if feature_null_score < score_null:
@@ -550,7 +556,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
                             start_logit=result.start_logits[start_index],
                             end_logit=result.end_logits[end_index]))
 
-        if FLAGS.is_squad_v2:
+        if is_squad_v2:
             prelim_predictions.append(
                 _PrelimPrediction(
                     feature_index=min_null_feature_index,
@@ -591,7 +597,8 @@ def write_squad_predictions(all_examples, all_features, all_results,
                 tok_text = " ".join(tok_text.split())
                 orig_text = " ".join(orig_tokens)
 
-                final_text = get_final_text(tok_text, orig_text, do_lower_case)
+                final_text = get_final_text(tok_text, orig_text, do_lower_case,
+                                            verbose_logging=verbose_logging)
                 if final_text in seen_predictions:
                     continue
 
@@ -607,7 +614,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
                     end_logit=pred.end_logit))
 
         # if we didn't inlude the empty option in the n-best, inlcude it
-        if FLAGS.is_squad_v2:
+        if is_squad_v2:
             if "" not in seen_predictions:
                 nbest.append(
                     _NbestPrediction(
@@ -642,7 +649,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
 
         assert len(nbest_json) >= 1
 
-        if not FLAGS.is_squad_v2:
+        if not is_squad_v2:
             all_predictions[example.qas_id] = nbest_json[0]["text"]
         else:
             # predict "" iff the null score - the score of best non-null >
@@ -650,7 +657,7 @@ def write_squad_predictions(all_examples, all_features, all_results,
             score_diff = score_null - best_non_null_entry.start_logit - (
                 best_non_null_entry.end_logit)
             scores_diff_json[example.qas_id] = score_diff
-            if score_diff > FLAGS.null_score_diff_threshold:
+            if score_diff > null_score_diff_threshold:
                 all_predictions[example.qas_id] = ""
             else:
                 all_predictions[example.qas_id] = best_non_null_entry.text
@@ -663,12 +670,13 @@ def write_squad_predictions(all_examples, all_features, all_results,
     with tf.gfile.GFile(output_nbest_file, "w") as writer:
         writer.write(json.dumps(all_nbest_json, indent=4) + "\n")
 
-    if FLAGS.is_squad_v2:
+    if is_squad_v2:
         with tf.gfile.GFile(output_null_log_odds_file, "w") as writer:
             writer.write(json.dumps(scores_diff_json, indent=4) + "\n")
 
 
-def get_final_text(pred_text, orig_text, do_lower_case):
+def get_final_text(pred_text, orig_text, do_lower_case,
+                   verbose_logging=False):
     """Project the tokenized prediction back to the original text."""
 
     # When we created the data, we kept track of the alignment between original
@@ -718,7 +726,7 @@ def get_final_text(pred_text, orig_text, do_lower_case):
 
     start_position = tok_text.find(pred_text)
     if start_position == -1:
-        if FLAGS.verbose_logging:
+        if verbose_logging:
             tf.logging.info(
                 "Unable to find text: '%s' in '%s'" % (pred_text, orig_text))
         return orig_text
@@ -728,7 +736,7 @@ def get_final_text(pred_text, orig_text, do_lower_case):
     (tok_ns_text, tok_ns_to_s_map) = _strip_spaces(tok_text)
 
     if len(orig_ns_text) != len(tok_ns_text):
-        if FLAGS.verbose_logging:
+        if verbose_logging:
             tf.logging.info(
                 "Length not equal after stripping spaces: '%s' vs '%s'",
                 orig_ns_text, tok_ns_text)
@@ -747,7 +755,7 @@ def get_final_text(pred_text, orig_text, do_lower_case):
             orig_start_position = orig_ns_to_s_map[ns_start_position]
 
     if orig_start_position is None:
-        if FLAGS.verbose_logging:
+        if verbose_logging:
             tf.logging.info("Couldn't map start position")
         return orig_text
 
@@ -758,7 +766,7 @@ def get_final_text(pred_text, orig_text, do_lower_case):
             orig_end_position = orig_ns_to_s_map[ns_end_position]
 
     if orig_end_position is None:
-        if FLAGS.verbose_logging:
+        if verbose_logging:
             tf.logging.info("Couldn't map end position")
         return orig_text
 
@@ -768,7 +776,8 @@ def get_final_text(pred_text, orig_text, do_lower_case):
 
 def _get_best_indexes(logits, n_best_size):
     """Get the n-best logits from a list."""
-    index_and_score = sorted(enumerate(logits), key=lambda x: x[1], reverse=True)
+    index_and_score = sorted(
+        enumerate(logits), key=lambda x: x[1], reverse=True)
 
     best_indexes = []
     for i in range(len(index_and_score)):

@@ -15,8 +15,8 @@
 
 """Create_model and model_fn_builder are completely interdependant"""
 
-import modeling
-import optimization
+from models import modeling
+from models import optimization
 
 import tensorflow as tf
 
