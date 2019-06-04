@@ -135,7 +135,6 @@ class ConfigBase(object):
         self.flags.DEFINE_integer(
             "num_tpu_cores", num_tpu_cores,
             "Only used if `use_tpu` is True. Total number of TPU cores to use")
-    
+
     def use_defaults(self):
         self.set_tpu_gpu()
-
