@@ -26,7 +26,7 @@ import random
 
 # Not sure if 'modeling' needs to be imported as a whole
 from models.modeling import BertConfig
-#import models.modeling as modeling
+# import models.modeling as modeling
 
 import models.optimization as optimization
 import data.tokenization as tokenization
@@ -49,8 +49,9 @@ FLAGS = None
 # TODO: Expand read_squad_examples to take is_squad_v2 = FLAGS.
 
 
-RawResult = collections.namedtuple("RawResult",
-                                   ["unique_id", "start_logits", "end_logits"])
+RawResult = collections.namedtuple(
+    "RawResult",
+    ["unique_id", "start_logits", "end_logits"])
 
 # TODO: Expand write_predicitons to take is_squad_v2 = FLAGS.xx
 # Need to manage other flag dependencies
@@ -63,7 +64,7 @@ def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
 
     # Base BERT model folder path
-    base_model_folder_path = "C:/Users/Angus/models/uncased_L-12_H-768_A-12"
+    base_model_folder_path = "C:/Users/Angus/models/uncased_L-12_H-768_A-12/"
 
     # Standard BERT config file name
     name_of_config_json_file = "bert_config.json"
@@ -74,41 +75,44 @@ def main(_):
     # Folder for output to be written to
     output_folder_path = base_model_folder_path + "/trained"
 
+    # TODO: Change the handle on these to fit pattern
+    squad_train_path = "C:\\Users\\Angus\\data\\SQuAD_2.0\\train-v2.0.json"
+    squad_test_path = squad_train_path
+
     Flags = ConfigSQuAD()
     Flags.set_tpu_gpu()
-    Flags.set_run_configs()
+    Flags.set_run_configs(is_squad_v2=True)
 
     Flags.set_task(
-        # do_train=True,
-        do_predict=True)
+        do_train=True,
+        # do_predict=True
+    )
 
     Flags.set_paths(
-        bert_config_file=name_of_config_json_file,
-        bert_vocab_file=name_of_vocab_file,
+        bert_config_file=base_model_folder_path + name_of_config_json_file,
+        bert_vocab_file=base_model_folder_path + name_of_vocab_file,
         bert_output_dir=output_folder_path,
 
-        # file_to_train=squad_10_path, # Need to figure out path vs folder
-        file_to_predict=squad_test_path)
+        file_to_train=squad_train_path  # Need to figure out path vs folder
+        # file_to_predict=squad_test_path
+    )
 
     Flags.set_training_params(
-        max_seq_length=69,
+        batch_size_train=2,
+        max_seq_length=384,
         max_answer_length=45)
 
     Flags.validate_flags_and_config()
     # TODO: unglobalize this (if possible)
     FLAGS = Flags.flags.FLAGS
 
-
-    # Configuration
-    # TODO: Modify configuration specification
-    #bert_config = modeling.BertConfig.from_json_file(
+    # bert_config = modeling.BertConfig.from_json_file(
     #    run_flags.bert_config_file)
-    bert_config = BertConfig.from_json_file(run_flags.bert_config_file)
+    bert_config = BertConfig.from_json_file(FLAGS.bert_config_file)
     bert_config.validate_input_size(FLAGS)
 
     tokenization.validate_word_cases(FLAGS.do_lower_case, 
                                      FLAGS.init_checkpoint)
-
 
     tf.gfile.MakeDirs(FLAGS.bert_output_dir)
 
@@ -116,7 +120,6 @@ def main(_):
 
 
     # Start processing
-
     # TODO: Wrap TPU handling
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
@@ -134,13 +137,17 @@ def main(_):
             num_shards=FLAGS.num_tpu_cores,
             per_host_input_for_training=is_per_host))
 
+
     # TODO: Wrap data loading routine
     train_examples = None
     num_train_steps = None
     num_warmup_steps = None
     if FLAGS.do_train:
         train_examples = read_squad_examples(
-            input_file=FLAGS.file_to_train, is_training=True)
+            input_file=FLAGS.file_to_train, is_training=True,
+            is_squad_v2=FLAGS.is_squad_v2)
+
+        print(len(train_examples))
         num_train_steps = int(
             len(train_examples) /
             FLAGS.batch_size_train * FLAGS.num_train_epochs)
@@ -150,6 +157,7 @@ def main(_):
         # buffer in in the `input_fn`.
         rng = random.Random(12345)
         rng.shuffle(train_examples)
+
 
     # Model initialization
     model_fn = model_fn_builder(
@@ -173,8 +181,8 @@ def main(_):
     tokenizer = tokenization.FullTokenizer(
         vocab_file=FLAGS.bert_vocab_file, do_lower_case=FLAGS.do_lower_case)
 
-
-
+    #print("--> Run Successfully")
+    
     # TODO: Wrat this in data loading routine
     if FLAGS.do_train:
         # We write to a temporary file to avoid storing very large constant
@@ -204,14 +212,14 @@ def main(_):
             seq_length=FLAGS.max_seq_length,
             is_training=True,
             drop_remainder=True)
+
+        print("--> Pre training")
         estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+    
 
 
 
-
-
-
-
+    """
     # TODO: Wrap prediction routine
     if FLAGS.do_predict:
         eval_examples = read_squad_examples(
@@ -274,18 +282,23 @@ def main(_):
         output_null_log_odds_file = os.path.join(FLAGS.bert_output_dir,
                                                  "null_odds.json")
 
-        write_squad_predictions(eval_examples, eval_features, all_results,
-                                FLAGS.n_best_size, FLAGS.max_answer_length,
-                                FLAGS.do_lower_case, output_prediction_file,
-                                output_nbest_file, output_null_log_odds_file,
-                                is_squad_v2=)
+        write_squad_predictions(
+            eval_examples, eval_features, all_results,
+            FLAGS.n_best_size, FLAGS.max_answer_length,
+            FLAGS.do_lower_case, output_prediction_file,
+            output_nbest_file, output_null_log_odds_file,
+            is_squad_v2=FLAGS.is_squad_v2,
+            null_score_diff_threshold=FLAGS.null_score_diff_threshold)
+    """
+
 
 
 
 
 
 if __name__ == "__main__":
-    flags.mark_flag_as_required("bert_vocab_file")
-    flags.mark_flag_as_required("bert_config_file")
-    flags.mark_flag_as_required("bert_output_dir")
-    tf.app.run()
+    #flags.mark_flag_as_required("bert_vocab_file")
+    #flags.mark_flag_as_required("bert_config_file")
+    #flags.mark_flag_as_required("bert_output_dir")
+    #tf.app.run()
+    main('')
