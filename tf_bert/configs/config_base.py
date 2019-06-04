@@ -35,11 +35,11 @@ class ConfigBase(object):
             "model. This specifies the model architecture.")
 
         self.flags.DEFINE_string(
-            "vocab_file", bert_vocab_file,
+            "bert_vocab_file", bert_vocab_file,
             "The vocabulary file that the BERT model was trained on.")
 
         self.flags.DEFINE_string(
-            "output_dir", bert_output_dir,
+            "bert_output_dir", bert_output_dir,
             "The output directory where the model checkpoints will be written")
 
     def set_training_params(self,
@@ -52,7 +52,7 @@ class ConfigBase(object):
                             num_train_epochs=3.0,
                             batch_size_train=32,
                             batch_size_predict=8,
-                            learning_rate=5e-5):
+                            learning_rate=3e-5):
         """BERT model parameters"""
         self.flags.DEFINE_string(
             "init_checkpoint", init_checkpoint,
@@ -138,3 +138,8 @@ class ConfigBase(object):
 
     def use_defaults(self):
         self.set_tpu_gpu()
+
+    def validate_flags_and_config(self,):
+        self.flags.mark_flag_as_required("bert_vocab_file")
+        self.flags.mark_flag_as_required("bert_config_file")
+        self.flags.mark_flag_as_required("bert_output_dir")

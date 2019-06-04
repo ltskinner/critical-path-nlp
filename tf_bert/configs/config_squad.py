@@ -46,11 +46,11 @@ class ConfigSQuAD(ConfigBase):
                   *args, **kwargs):
         """Set SQuAD specific files, in addition to BERT files"""
         self.flags.DEFINE_string(
-            "train_file", file_to_train,
+            "file_to_train", file_to_train,
             "SQuAD json for training. E.g., train-v1.1.json")
 
         self.flags.DEFINE_string(
-            "predict_file", file_to_predict,
+            "file_to_predict", file_to_predict,
             "SQuAD json for predictions. " +
             "E.g., dev-v1.1.json or test-v1.1.json")
 
@@ -123,18 +123,20 @@ class ConfigSQuAD(ConfigBase):
                              "must be True.")
 
         if FLAGS.do_train:
-            if not FLAGS.train_file:
+            if not FLAGS.file_to_train:
                 raise ValueError(
-                    "If `do_train` is True, then `train_file` must be "
+                    "If `do_train` is True, then `file_to_train` must be "
                     "specified.")
         if FLAGS.do_predict:
-            if not FLAGS.predict_file:
+            if not FLAGS.file_to_predict:
                 raise ValueError(
                     "If `do_predict` is True, "
-                    "then `predict_file` must be specified.")
+                    "then `file_to_predict` must be specified.")
 
         if FLAGS.max_seq_length <= FLAGS.max_query_length + 3:
             raise ValueError(
                 "The max_seq_length (%d) must be greater "
                 "than max_query_length (%d) + 3" %
                 (FLAGS.max_seq_length, FLAGS.max_query_length))
+
+        ConfigBase.validate_flags_and_config(self)
