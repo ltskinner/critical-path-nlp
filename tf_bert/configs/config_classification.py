@@ -53,19 +53,31 @@ class ConfigClassification(ConfigBase):
             "Whether to run the model in inference mode on the test set.")
 
     def set_paths(self,
-                  data_dir=None):
+                  data_dir=None,
+                  *args, **kwargs):
         # Classification specific files
         self.flags.DEFINE_string(
             "data_dir", None,
             "The input data dir. Should contain the .tsv files "
             "(or other data files) for the task.")
 
+        ConfigBase.set_paths(self, *args, **kwargs)
+
     def set_training_params(self,
-                            eval_batch_size=8):
+                            batch_size_eval=8,
+                            *args, **kwargs):
         # Training Parameter
         self.flags.DEFINE_integer(
-            "eval_batch_size", eval_batch_size,
+            "batch_size_eval", batch_size_eval,
             "Total batch size for eval.")
+
+        ConfigBase.set_training_params(self, *args, **kwargs)
+
+    def use_defaults(self,):
+        """Use all default params"""
+        self.set_training_params()
+
+        ConfigBase.use_defaults(self)
 
     def validate_flags_or_throw(self,):
         """Validate the input FLAGS or throw an exception."""

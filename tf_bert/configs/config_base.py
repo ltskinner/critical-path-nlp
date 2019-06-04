@@ -50,8 +50,8 @@ class ConfigBase(object):
                             save_checkpoints_steps=1000,
                             iterations_per_loop=1000,
                             num_train_epochs=3.0,
-                            train_batch_size=32,
-                            predict_batch_size=8,
+                            batch_size_train=32,
+                            batch_size_predict=8,
                             learning_rate=5e-5):
         """BERT model parameters"""
         self.flags.DEFINE_string(
@@ -87,11 +87,11 @@ class ConfigBase(object):
             "Total number of training epochs to perform.")
 
         self.flags.DEFINE_integer(
-            "train_batch_size", train_batch_size,
+            "batch_size_train", batch_size_train,
             "Total batch size for training.")
 
         self.flags.DEFINE_integer(
-            "predict_batch_size", predict_batch_size,
+            "batch_size_predict", batch_size_predict,
             "Total batch size for predict.")
 
         self.flags.DEFINE_float(
@@ -135,3 +135,7 @@ class ConfigBase(object):
         self.flags.DEFINE_integer(
             "num_tpu_cores", num_tpu_cores,
             "Only used if `use_tpu` is True. Total number of TPU cores to use")
+    
+    def use_defaults(self):
+        self.set_tpu_gpu()
+

@@ -107,6 +107,13 @@ class ConfigSQuAD(ConfigBase):
 
         ConfigBase.set_training_params(self, *args, **kwargs)
 
+    def use_defaults(self,):
+        """Use all default params"""
+        self.set_run_configs()
+        self.set_training_params()
+
+        ConfigBase.use_defaults(self)
+
     def validate_flags_and_config(self,):
         """Validate the input FLAGS or throw an exception."""
         FLAGS = self.flags.FLAGS
