@@ -142,6 +142,7 @@ class FeatureWriter(object):
 def read_squad_examples(input_file, is_training,
                         is_squad_v2=False):
     """Read a SQuAD json file into a list of SquadExample."""
+    print("Rea")
     with tf.gfile.Open(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
 
@@ -168,57 +169,58 @@ def read_squad_examples(input_file, is_training,
                     prev_is_whitespace = False
                 char_to_word_offset.append(len(doc_tokens) - 1)
 
-        for qa in paragraph["qas"]:
-            qas_id = qa["id"]
-            question_text = qa["question"]
-            start_position = None
-            end_position = None
-            orig_answer_text = None
-            is_impossible = False
-            if is_training:
+            for qa in paragraph["qas"]:
+                qas_id = qa["id"]
+                question_text = qa["question"]
+                start_position = None
+                end_position = None
+                orig_answer_text = None
+                is_impossible = False
+                if is_training:
+                    if is_squad_v2:  # FLAGS.version_2_with_negative
+                        is_impossible = qa["is_impossible"]
+                    if (len(qa["answers"]) != 1) and (not is_impossible):
+                        raise ValueError(
+                            "For training, each question should have" +
+                            " exactly 1 answer.")
+                    if not is_impossible:
+                        answer = qa["answers"][0]
+                        orig_answer_text = answer["text"]
+                        answer_offset = answer["answer_start"]
+                        answer_length = len(orig_answer_text)
+                        start_position = char_to_word_offset[answer_offset]
+                        end_position = char_to_word_offset[answer_offset +
+                                                           answer_length - 1]
+                        # Only add answers where the text can be exactly 
+                        # recovered from the document. If this CAN'T happen 
+                        # it's likely due to weird Unicode stuff so we will 
+                        # just skip the example.
+                        #
+                        # Note that this means for training mode, every example
+                        # is NOT guaranteed to be preserved.
+                        actual_text = " ".join(
+                            doc_tokens[start_position:(end_position + 1)])
+                        cleaned_answer_text = " ".join(
+                            tokenization.whitespace_tokenize(orig_answer_text))
+                    if actual_text.find(cleaned_answer_text) == -1:
+                        tf.logging.warning(
+                            "Could not find answer: '%s' vs. '%s'",
+                            actual_text, cleaned_answer_text)
+                        continue
+                else:
+                    start_position = -1
+                    end_position = -1
+                    orig_answer_text = ""
 
-                if is_squad_v2:  # FLAGS.version_2_with_negative
-                    is_impossible = qa["is_impossible"]
-                if (len(qa["answers"]) != 1) and (not is_impossible):
-                    raise ValueError(
-                        "For training, each question should have" +
-                        " exactly 1 answer.")
-                if not is_impossible:
-                    answer = qa["answers"][0]
-                    orig_answer_text = answer["text"]
-                    answer_offset = answer["answer_start"]
-                    answer_length = len(orig_answer_text)
-                    start_position = char_to_word_offset[answer_offset]
-                    end_position = char_to_word_offset[answer_offset +
-                                                       answer_length - 1]
-            # Only add answers where the text can be exactly recovered from the
-            # document. If this CAN'T happen it's likely due to weird Unicode
-            # stuff so we will just skip the example.
-            #
-            # Note that this means for training mode, every example is NOT
-            # guaranteed to be preserved.
-                    actual_text = " ".join(
-                        doc_tokens[start_position:(end_position + 1)])
-                    cleaned_answer_text = " ".join(
-                        tokenization.whitespace_tokenize(orig_answer_text))
-                if actual_text.find(cleaned_answer_text) == -1:
-                    tf.logging.warning("Could not find answer: '%s' vs. '%s'",
-                                       actual_text, cleaned_answer_text)
-                    continue
-            else:
-                start_position = -1
-                end_position = -1
-                orig_answer_text = ""
-
-            example = SquadExample(
-                qas_id=qas_id,
-                question_text=question_text,
-                doc_tokens=doc_tokens,
-                orig_answer_text=orig_answer_text,
-                start_position=start_position,
-                end_position=end_position,
-                is_impossible=is_impossible)
-            examples.append(example)
+                example = SquadExample(
+                    qas_id=qas_id,
+                    question_text=question_text,
+                    doc_tokens=doc_tokens,
+                    orig_answer_text=orig_answer_text,
+                    start_position=start_position,
+                    end_position=end_position,
+                    is_impossible=is_impossible)
+                examples.append(example)
 
     return examples
 
@@ -265,9 +267,9 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         # The -3 accounts for [CLS], [SEP] and [SEP]
         max_tokens_for_doc = max_seq_length - len(query_tokens) - 3
 
-    # We can have documents that are longer than the maximum sequence length.
-    # To deal with this we do a sliding window approach, where we take chunks
-    # of the up to our max length with a stride of `doc_stride`.
+        # We can have documents that are longer than the maximum sequence 
+        # length. To deal with this we do a sliding window approach, where we 
+        # take chunks of the up to our max length with a stride of `doc_stride`
         _DocSpan = collections.namedtuple(  # pylint: disable=invalid-name
             "DocSpan", ["start", "length"])
         doc_spans = []
@@ -310,11 +312,11 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
             input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
+            # The mask has 1 for real tokens and 0 for padding tokens. Only
+            # real tokens are attended to.
             input_mask = [1] * len(input_ids)
 
-        # Zero-pad up to the sequence length.
+            # Zero-pad up to the sequence length.
             while len(input_ids) < max_seq_length:
                 input_ids.append(0)
                 input_mask.append(0)

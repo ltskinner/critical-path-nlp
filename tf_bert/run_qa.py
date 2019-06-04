@@ -98,9 +98,9 @@ def main(_):
     )
 
     Flags.set_training_params(
-        batch_size_train=2,
+        batch_size_train=4,
         max_seq_length=384,
-        max_answer_length=45)
+        max_answer_length=30)
 
     Flags.validate_flags_and_config()
     # TODO: unglobalize this (if possible)

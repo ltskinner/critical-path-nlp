@@ -1,0 +1,9 @@
+
+Convert to regular logger? (Instead of tf.logger)
+
+Redo reading samples
+
+Redo writing predictions
+
+Make small testing train sample when refactoring trianing abstractions
+
