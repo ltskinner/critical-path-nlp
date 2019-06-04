@@ -48,7 +48,7 @@ def test_config_squad():
         print(FLAGS.bert_config_file)
         print(FLAGS.max_seq_length)
         print(FLAGS.max_answer_length)
-        
+
     def test_concise():
         FLAGS = None
         Flags2 = ConfigSQuAD()
