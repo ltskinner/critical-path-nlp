@@ -110,7 +110,7 @@ def main(_):
                                      FLAGS.init_checkpoint)
 
 
-    tf.gfile.MakeDirs(FLAGS.output_dir)
+    tf.gfile.MakeDirs(FLAGS.bert_output_dir)
 
 
 
@@ -127,7 +127,7 @@ def main(_):
     run_config = tf.contrib.tpu.RunConfig(
         cluster=tpu_cluster_resolver,
         master=FLAGS.master,
-        model_dir=FLAGS.output_dir,
+        model_dir=FLAGS.bert_output_dir,
         save_checkpoints_steps=FLAGS.save_checkpoints_steps,
         tpu_config=tf.contrib.tpu.TPUConfig(
             iterations_per_loop=FLAGS.iterations_per_loop,
@@ -140,10 +140,10 @@ def main(_):
     num_warmup_steps = None
     if FLAGS.do_train:
         train_examples = read_squad_examples(
-            input_file=FLAGS.train_file, is_training=True)
+            input_file=FLAGS.file_to_train, is_training=True)
         num_train_steps = int(
             len(train_examples) /
-            FLAGS.train_batch_size * FLAGS.num_train_epochs)
+            FLAGS.batch_size_train * FLAGS.num_train_epochs)
         num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
         # Pre-shuffle the input to avoid having to make a very large shuffle
@@ -167,11 +167,11 @@ def main(_):
         use_tpu=FLAGS.use_tpu,
         model_fn=model_fn,
         config=run_config,
-        train_batch_size=FLAGS.train_batch_size,
-        predict_batch_size=FLAGS.predict_batch_size)
+        train_batch_size=FLAGS.batch_size_train,
+        predict_batch_size=FLAGS.batch_size_predict)
 
     tokenizer = tokenization.FullTokenizer(
-        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
+        vocab_file=FLAGS.bert_vocab_file, do_lower_case=FLAGS.do_lower_case)
 
 
 
@@ -180,7 +180,7 @@ def main(_):
         # We write to a temporary file to avoid storing very large constant
         # tensors in memory.
         train_writer = FeatureWriter(
-            filename=os.path.join(FLAGS.output_dir, "train.tf_record"),
+            filename=os.path.join(FLAGS.bert_output_dir, "train.tf_record"),
             is_training=True)
         convert_examples_to_features(
             examples=train_examples,
@@ -195,7 +195,7 @@ def main(_):
         tf.logging.info("***** Running training *****")
         tf.logging.info("  Num orig examples = %d", len(train_examples))
         tf.logging.info("  Num split examples = %d", train_writer.num_features)
-        tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
+        tf.logging.info("  Batch size = %d", FLAGS.batch_size_train)
         tf.logging.info("  Num steps = %d", num_train_steps)
         del train_examples
 
@@ -215,10 +215,10 @@ def main(_):
     # TODO: Wrap prediction routine
     if FLAGS.do_predict:
         eval_examples = read_squad_examples(
-            input_file=FLAGS.predict_file, is_training=False)
+            input_file=FLAGS.file_to_predict, is_training=False)
 
         eval_writer = FeatureWriter(
-            filename=os.path.join(FLAGS.output_dir, "eval.tf_record"),
+            filename=os.path.join(FLAGS.bert_output_dir, "eval.tf_record"),
             is_training=False)
         eval_features = []
 
@@ -239,7 +239,7 @@ def main(_):
         tf.logging.info("***** Running predictions *****")
         tf.logging.info("  Num orig examples = %d", len(eval_examples))
         tf.logging.info("  Num split examples = %d", len(eval_features))
-        tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
+        tf.logging.info("  Batch size = %d", FLAGS.batch_size_predict)
 
         all_results = []
 
@@ -267,11 +267,11 @@ def main(_):
 
 
         # Save results
-        output_prediction_file = os.path.join(FLAGS.output_dir,
+        output_prediction_file = os.path.join(FLAGS.bert_output_dir,
                                               "predictions.json")
-        output_nbest_file = os.path.join(FLAGS.output_dir,
+        output_nbest_file = os.path.join(FLAGS.bert_output_dir,
                                          "nbest_predictions.json")
-        output_null_log_odds_file = os.path.join(FLAGS.output_dir,
+        output_null_log_odds_file = os.path.join(FLAGS.bert_output_dir,
                                                  "null_odds.json")
 
         write_squad_predictions(eval_examples, eval_features, all_results,
@@ -285,7 +285,7 @@ def main(_):
 
 
 if __name__ == "__main__":
-    flags.mark_flag_as_required("vocab_file")
+    flags.mark_flag_as_required("bert_vocab_file")
     flags.mark_flag_as_required("bert_config_file")
-    flags.mark_flag_as_required("output_dir")
+    flags.mark_flag_as_required("bert_output_dir")
     tf.app.run()
