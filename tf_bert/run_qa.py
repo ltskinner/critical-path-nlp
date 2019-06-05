@@ -22,21 +22,26 @@ import collections
 import json
 import math
 import os
-import random
 
 # Not sure if 'modeling' needs to be imported as a whole
 from models.modeling import BertConfig
 # import models.modeling as modeling
 
-import models.optimization as optimization
 import data.tokenization as tokenization
+#from data.tokenization import validate_word_cases
 from data.squad_data import read_squad_examples, write_squad_predictions
-from data.squad_data import FeatureWriter, convert_examples_to_features
-from models.squad_model import input_fn_builder, model_fn_builder
+# from data.squad_data import FeatureWriter, convert_examples_to_features
 from configs.config_squad import ConfigSQuAD
+from models.modeling import init_model
+
+from models.squad_model import input_fn_builder, model_fn_builder
+from models.squad_model import train_squad, eval_squad
+
 
 import six
 import tensorflow as tf
+
+from datetime import datetime
 
 
 
@@ -56,7 +61,6 @@ RawResult = collections.namedtuple(
 # TODO: Expand write_predicitons to take is_squad_v2 = FLAGS.xx
 # Need to manage other flag dependencies
 
-# TODO: First test just try and pred!!! Do NOT start a training session
 
 
 
@@ -76,7 +80,8 @@ def main(_):
     output_folder_path = base_model_folder_path + "/trained"
 
     # TODO: Change the handle on these to fit pattern
-    squad_train_path = "C:\\Users\\Angus\\data\\SQuAD_2.0\\train-v2.0.json"
+    # squad_train_path = "C:\\Users\\Angus\\data\\SQuAD_2.0\\train-v2.0.json"
+    squad_train_path = "C:\\Users\\Angus\\data\\SQuAD_2.0\\small-train-2.0.json"
     squad_test_path = squad_train_path
 
     Flags = ConfigSQuAD()
@@ -111,168 +116,39 @@ def main(_):
     bert_config = BertConfig.from_json_file(FLAGS.bert_config_file)
     bert_config.validate_input_size(FLAGS)
 
-    tokenization.validate_word_cases(FLAGS.do_lower_case, 
-                                     FLAGS.init_checkpoint)
+    tokenization.validate_word_cases(
+        FLAGS.do_lower_case, FLAGS.init_checkpoint)
 
     tf.gfile.MakeDirs(FLAGS.bert_output_dir)
 
-
-
-
-    # Start processing
-    # TODO: Wrap TPU handling
-    tpu_cluster_resolver = None
-    if FLAGS.use_tpu and FLAGS.tpu_name:
-        tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-            FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
-
-    is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config = tf.contrib.tpu.RunConfig(
-        cluster=tpu_cluster_resolver,
-        master=FLAGS.master,
-        model_dir=FLAGS.bert_output_dir,
-        save_checkpoints_steps=FLAGS.save_checkpoints_steps,
-        tpu_config=tf.contrib.tpu.TPUConfig(
-            iterations_per_loop=FLAGS.iterations_per_loop,
-            num_shards=FLAGS.num_tpu_cores,
-            per_host_input_for_training=is_per_host))
-
-
-    # TODO: Wrap data loading routine
-    train_examples = None
-    num_train_steps = None
-    num_warmup_steps = None
-    if FLAGS.do_train:
-        train_examples = read_squad_examples(
-            input_file=FLAGS.file_to_train, is_training=True,
-            is_squad_v2=FLAGS.is_squad_v2)
-
-        print(len(train_examples))
-        num_train_steps = int(
-            len(train_examples) /
-            FLAGS.batch_size_train * FLAGS.num_train_epochs)
-        num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
-
-        # Pre-shuffle the input to avoid having to make a very large shuffle
-        # buffer in in the `input_fn`.
-        rng = random.Random(12345)
-        rng.shuffle(train_examples)
-
-
-    # Model initialization
-    model_fn = model_fn_builder(
-        bert_config=bert_config,
-        init_checkpoint=FLAGS.init_checkpoint,
-        learning_rate=FLAGS.learning_rate,
-        num_train_steps=num_train_steps,
-        num_warmup_steps=num_warmup_steps,
-        use_tpu=FLAGS.use_tpu,
-        use_one_hot_embeddings=FLAGS.use_tpu)
-
-    # If TPU is not available, this will fall back to normal Estimator on CPU
-    # or GPU.
-    estimator = tf.contrib.tpu.TPUEstimator(
-        use_tpu=FLAGS.use_tpu,
-        model_fn=model_fn,
-        config=run_config,
-        train_batch_size=FLAGS.batch_size_train,
-        predict_batch_size=FLAGS.batch_size_predict)
-
+    # -------------------------------------------------------------------------
+    
+    train_samples = read_squad_examples(
+        input_file=FLAGS.file_to_train,
+        is_training=True,
+        is_squad_v2=FLAGS.is_squad_v2)
+    
     tokenizer = tokenization.FullTokenizer(
         vocab_file=FLAGS.bert_vocab_file, do_lower_case=FLAGS.do_lower_case)
 
-    #print("--> Run Successfully")
-    
-    # TODO: Wrat this in data loading routine
+    estimator = init_model(bert_config, FLAGS,
+                           model_fn_builder=model_fn_builder,
+                           train_samples=train_samples)
+
     if FLAGS.do_train:
-        # We write to a temporary file to avoid storing very large constant
-        # tensors in memory.
-        train_writer = FeatureWriter(
-            filename=os.path.join(FLAGS.bert_output_dir, "train.tf_record"),
-            is_training=True)
-        convert_examples_to_features(
-            examples=train_examples,
-            tokenizer=tokenizer,
-            max_seq_length=FLAGS.max_seq_length,
-            doc_stride=FLAGS.doc_stride,
-            max_query_length=FLAGS.max_query_length,
-            is_training=True,
-            output_fn=train_writer.process_feature)
-        train_writer.close()
-
-        tf.logging.info("***** Running training *****")
-        tf.logging.info("  Num orig examples = %d", len(train_examples))
-        tf.logging.info("  Num split examples = %d", train_writer.num_features)
-        tf.logging.info("  Batch size = %d", FLAGS.batch_size_train)
-        tf.logging.info("  Num steps = %d", num_train_steps)
-        del train_examples
-
-        train_input_fn = input_fn_builder(
-            input_file=train_writer.filename,
-            seq_length=FLAGS.max_seq_length,
-            is_training=True,
-            drop_remainder=True)
-
-        print("--> Pre training")
-        estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+        train_squad(train_samples, estimator, tokenizer, FLAGS)
     
-
-
-
     """
-    # TODO: Wrap prediction routine
     if FLAGS.do_predict:
-        eval_examples = read_squad_examples(
-            input_file=FLAGS.file_to_predict, is_training=False)
-
-        eval_writer = FeatureWriter(
-            filename=os.path.join(FLAGS.bert_output_dir, "eval.tf_record"),
-            is_training=False)
-        eval_features = []
-
-        def append_feature(feature):
-            eval_features.append(feature)
-            eval_writer.process_feature(feature)
-
-        convert_examples_to_features(
-            examples=eval_examples,
-            tokenizer=tokenizer,
-            max_seq_length=FLAGS.max_seq_length,
-            doc_stride=FLAGS.doc_stride,
-            max_query_length=FLAGS.max_query_length,
+        eval_samples = read_squad_examples(
+            input_file=FLAGS.file_to_predict,
             is_training=False,
-            output_fn=append_feature)
-        eval_writer.close()
+            is_squad_v2=FLAGS.is_squad_v2)
 
-        tf.logging.info("***** Running predictions *****")
-        tf.logging.info("  Num orig examples = %d", len(eval_examples))
-        tf.logging.info("  Num split examples = %d", len(eval_features))
-        tf.logging.info("  Batch size = %d", FLAGS.batch_size_predict)
+        results = eval_squad(eval_samples, estimator, tokenizer, FLAGS)
 
-        all_results = []
-
-        predict_input_fn = input_fn_builder(
-            input_file=eval_writer.filename,
-            seq_length=FLAGS.max_seq_length,
-            is_training=False,
-            drop_remainder=False)
-
-        # If running eval on the TPU, you will need to specify the number of
-        # steps.
-        all_results = []
-        for result in estimator.predict(
-                predict_input_fn, yield_single_examples=True):
-            if len(all_results) % 1000 == 0:
-                tf.logging.info("Processing example: %d" % (len(all_results)))
-            unique_id = int(result["unique_ids"])
-            start_logits = [float(x) for x in result["start_logits"].flat]
-            end_logits = [float(x) for x in result["end_logits"].flat]
-            all_results.append(
-                RawResult(
-                    unique_id=unique_id,
-                    start_logits=start_logits,
-                    end_logits=end_logits))
-
+        eval_features = results['eval_features']
+        all_results = results['eval_results']
 
         # Save results
         output_prediction_file = os.path.join(FLAGS.bert_output_dir,
@@ -283,7 +159,7 @@ def main(_):
                                                  "null_odds.json")
 
         write_squad_predictions(
-            eval_examples, eval_features, all_results,
+            eval_samples, eval_features, all_results,
             FLAGS.n_best_size, FLAGS.max_answer_length,
             FLAGS.do_lower_case, output_prediction_file,
             output_nbest_file, output_null_log_odds_file,
@@ -292,13 +168,11 @@ def main(_):
     """
 
 
-
-
-
-
 if __name__ == "__main__":
     #flags.mark_flag_as_required("bert_vocab_file")
     #flags.mark_flag_as_required("bert_config_file")
     #flags.mark_flag_as_required("bert_output_dir")
     #tf.app.run()
+    startTime = datetime.now()
     main('')
+    print("\nRun time:", datetime.now() - startTime)

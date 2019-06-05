@@ -15,8 +15,14 @@
 
 """Create_model and model_fn_builder are completely interdependant"""
 
+import collections
+import os 
+
 from models import modeling
 from models import optimization
+
+from data.squad_data import FeatureWriter, convert_examples_to_features
+from models.modeling import find_steps
 
 import tensorflow as tf
 
@@ -209,3 +215,99 @@ def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
         return d
 
     return input_fn
+
+
+def train_squad(train_samples, estimator, tokenizer, FLAGS):
+    # We write to a temporary file to avoid storing very large constant
+    # tensors in memory.
+    train_writer = FeatureWriter(
+        filename=os.path.join(FLAGS.bert_output_dir, "train.tf_record"),
+        is_training=True)
+    convert_examples_to_features(
+        examples=train_samples,
+        tokenizer=tokenizer,
+        max_seq_length=FLAGS.max_seq_length,
+        doc_stride=FLAGS.doc_stride,
+        max_query_length=FLAGS.max_query_length,
+        is_training=True,
+        output_fn=train_writer.process_feature)
+    train_writer.close()
+
+    num_train_steps, _ = find_steps(train_samples, FLAGS)
+
+    tf.logging.info("***** Running training *****")
+    tf.logging.info("  Num orig examples = %d", len(train_samples))
+    tf.logging.info("  Num split examples = %d", train_writer.num_features)
+    tf.logging.info("  Batch size = %d", FLAGS.batch_size_train)
+    tf.logging.info("  Num steps = %d", num_train_steps)
+    del train_samples
+
+    train_input_fn = input_fn_builder(
+        input_file=train_writer.filename,
+        seq_length=FLAGS.max_seq_length,
+        is_training=True,
+        drop_remainder=True)
+
+    print("--> Pre training")
+    estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+
+
+def eval_squad(eval_samples, estimator, tokenizer, FLAGS):
+
+    RawResult = collections.namedtuple(
+        "RawResult",
+        ["unique_id", "start_logits", "end_logits"])
+
+    eval_writer = FeatureWriter(
+        filename=os.path.join(FLAGS.bert_output_dir, "eval.tf_record"),
+        is_training=False)
+    eval_features = []
+
+    def append_feature(feature):
+        eval_features.append(feature)
+        eval_writer.process_feature(feature)
+
+    convert_examples_to_features(
+        examples=eval_samples,
+        tokenizer=tokenizer,
+        max_seq_length=FLAGS.max_seq_length,
+        doc_stride=FLAGS.doc_stride,
+        max_query_length=FLAGS.max_query_length,
+        is_training=False,
+        output_fn=append_feature)
+    eval_writer.close()
+
+    tf.logging.info("***** Running predictions *****")
+    tf.logging.info("  Num orig examples = %d", len(eval_samples))
+    tf.logging.info("  Num split examples = %d", len(eval_features))
+    tf.logging.info("  Batch size = %d", FLAGS.batch_size_predict)
+
+    all_results = []
+
+    predict_input_fn = input_fn_builder(
+        input_file=eval_writer.filename,
+        seq_length=FLAGS.max_seq_length,
+        is_training=False,
+        drop_remainder=False)
+
+    # If running eval on the TPU, you will need to specify the number of
+    # steps.
+    all_results = []
+    for result in estimator.predict(
+            predict_input_fn, yield_single_examples=True):
+        if len(all_results) % 1000 == 0:
+            tf.logging.info("Processing example: %d" % (len(all_results)))
+        unique_id = int(result["unique_ids"])
+        start_logits = [float(x) for x in result["start_logits"].flat]
+        end_logits = [float(x) for x in result["end_logits"].flat]
+        all_results.append(
+            RawResult(
+                unique_id=unique_id,
+                start_logits=start_logits,
+                end_logits=end_logits))
+
+    results = {
+        'eval_features': eval_features,
+        'all_results': all_results
+    }
+    return results

@@ -16,6 +16,7 @@
 import collections
 import json
 import math
+import random
 
 from data import tokenization
 
@@ -139,10 +140,12 @@ class FeatureWriter(object):
         self._writer.close()
 
 
+
+
 def read_squad_examples(input_file, is_training,
                         is_squad_v2=False):
     """Read a SQuAD json file into a list of SquadExample."""
-    print("Rea")
+    print("Reading from tf.gfile, switch to not that")
     with tf.gfile.Open(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
 
@@ -191,9 +194,9 @@ def read_squad_examples(input_file, is_training,
                         start_position = char_to_word_offset[answer_offset]
                         end_position = char_to_word_offset[answer_offset +
                                                            answer_length - 1]
-                        # Only add answers where the text can be exactly 
-                        # recovered from the document. If this CAN'T happen 
-                        # it's likely due to weird Unicode stuff so we will 
+                        # Only add answers where the text can be exactly
+                        # recovered from the document. If this CAN'T happen
+                        # it's likely due to weird Unicode stuff so we will
                         # just skip the example.
                         #
                         # Note that this means for training mode, every example
@@ -221,6 +224,10 @@ def read_squad_examples(input_file, is_training,
                     end_position=end_position,
                     is_impossible=is_impossible)
                 examples.append(example)
+
+    if is_training:
+        rng = random.Random(12345)
+        rng.shuffle(examples)
 
     return examples
 
@@ -267,8 +274,8 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         # The -3 accounts for [CLS], [SEP] and [SEP]
         max_tokens_for_doc = max_seq_length - len(query_tokens) - 3
 
-        # We can have documents that are longer than the maximum sequence 
-        # length. To deal with this we do a sliding window approach, where we 
+        # We can have documents that are longer than the maximum sequence
+        # length. To deal with this we do a sliding window approach, where we
         # take chunks of the up to our max length with a stride of `doc_stride`
         _DocSpan = collections.namedtuple(  # pylint: disable=invalid-name
             "DocSpan", ["start", "length"])
@@ -377,7 +384,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
                     tf.logging.info("start_position: %d" % (start_position))
                     tf.logging.info("end_position: %d" % (end_position))
                     tf.logging.info(
-                        "answer: %s" % 
+                        "answer: %s" %
                         (tokenization.printable_text(answer_text)))
 
             feature = InputFeatures(

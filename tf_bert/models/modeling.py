@@ -28,6 +28,74 @@ import six
 import tensorflow as tf
 
 
+def init_model(bert_config, FLAGS,
+               model_fn_builder=None,
+               train_samples=None):
+    # ------------------------- Init all these bois
+    # Start processing
+    # TODO: Wrap TPU handling
+
+    if FLAGS.do_train and (train_samples is None):
+        raise ValueError("'do_train' is True, yet train_samples is None."
+                         " Please pass in the training samples")
+    
+    if model_fn_builder is None:
+      raise ValueError("Please import and specify model task"
+                       "e.g. import squad_fn_builder")
+
+    num_train_steps, num_warmup_steps = find_steps(train_samples, FLAGS)
+
+    tpu_cluster_resolver = None
+    if FLAGS.use_tpu and FLAGS.tpu_name:
+        tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+            FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+
+    is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
+    run_config = tf.contrib.tpu.RunConfig(
+        cluster=tpu_cluster_resolver,
+        master=FLAGS.master,
+        model_dir=FLAGS.bert_output_dir,
+        save_checkpoints_steps=FLAGS.save_checkpoints_steps,
+        tpu_config=tf.contrib.tpu.TPUConfig(
+            iterations_per_loop=FLAGS.iterations_per_loop,
+            num_shards=FLAGS.num_tpu_cores,
+            per_host_input_for_training=is_per_host))
+
+    # Model initialization
+    model_fn = model_fn_builder(
+        bert_config=bert_config,
+        init_checkpoint=FLAGS.init_checkpoint,
+        learning_rate=FLAGS.learning_rate,
+        num_train_steps=num_train_steps,  # Needs to know 
+        num_warmup_steps=num_warmup_steps,
+        use_tpu=FLAGS.use_tpu,
+        use_one_hot_embeddings=FLAGS.use_tpu)
+
+    # If TPU is not available, this will fall back to normal Estimator on CPU
+    # or GPU.
+    estimator = tf.contrib.tpu.TPUEstimator(
+        use_tpu=FLAGS.use_tpu,
+        model_fn=model_fn,
+        config=run_config,
+        train_batch_size=FLAGS.batch_size_train,
+        predict_batch_size=FLAGS.batch_size_predict)
+
+    return estimator
+
+
+def find_steps(train_samples, FLAGS):
+  if train_samples is not None:
+    num_train_steps = int(
+      len(train_samples) /
+      FLAGS.batch_size_train * FLAGS.num_train_epochs)
+    num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
+  else:
+    num_train_steps = None
+    num_warmup_steps = None
+
+  return num_train_steps, num_warmup_steps
+
+
 class BertConfig(object):
   """Configuration for `BertModel`."""
 
