@@ -45,23 +45,13 @@ from datetime import datetime
 
 
 
-# TODO: Load configs
-FLAGS = None
-
-
-
-
-# TODO: Expand read_squad_examples to take is_squad_v2 = FLAGS.
-
-
 RawResult = collections.namedtuple(
     "RawResult",
     ["unique_id", "start_logits", "end_logits"])
 
-# TODO: Expand write_predicitons to take is_squad_v2 = FLAGS.xx
-# Need to manage other flag dependencies
 
 
+# TODO: figure out file paths for reading trained model to make preds 
 
 
 def main(_):
@@ -80,8 +70,8 @@ def main(_):
     output_folder_path = base_model_folder_path + "/trained"
 
     # TODO: Change the handle on these to fit pattern
-    # squad_train_path = "C:\\Users\\Angus\\data\\SQuAD_2.0\\train-v2.0.json"
-    squad_train_path = "C:\\Users\\Angus\\data\\SQuAD_2.0\\small-train-2.0.json"
+    squad_train_path = "C:\\Users\\Angus\\data\\SQuAD_2.0\\train-v2.0.json"
+    # squad_train_path = "C:\\Users\\Angus\\data\\SQuAD_2.0\\small-train-2.0.json"
     squad_test_path = squad_train_path
 
     Flags = ConfigSQuAD()
@@ -89,20 +79,19 @@ def main(_):
     Flags.set_run_configs(is_squad_v2=True)
 
     Flags.set_task(
-        do_train=True,
-        # do_predict=True
-    )
+        do_train=True,)
+        # do_predict=True)
 
     Flags.set_paths(
         bert_config_file=base_model_folder_path + name_of_config_json_file,
         bert_vocab_file=base_model_folder_path + name_of_vocab_file,
         bert_output_dir=output_folder_path,
 
-        file_to_train=squad_train_path  # Need to figure out path vs folder
-        # file_to_predict=squad_test_path
-    )
+        file_to_train=squad_train_path)  # Need to figure out path vs folder
+        # file_to_predict=squad_test_path)
 
     Flags.set_training_params(
+        init_checkpoint="79000",
         batch_size_train=4,
         max_seq_length=384,
         max_answer_length=30)
@@ -128,6 +117,8 @@ def main(_):
         is_training=True,
         is_squad_v2=FLAGS.is_squad_v2)
     
+    print('read_samples')
+    
     tokenizer = tokenization.FullTokenizer(
         vocab_file=FLAGS.bert_vocab_file, do_lower_case=FLAGS.do_lower_case)
 
@@ -136,6 +127,7 @@ def main(_):
                            train_samples=train_samples)
 
     if FLAGS.do_train:
+        print('training')
         train_squad(train_samples, estimator, tokenizer, FLAGS)
     
     """
