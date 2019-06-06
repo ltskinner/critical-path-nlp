@@ -1,0 +1,23 @@
+
+
+consolidate
+    /data
+    /models
+
+    to
+
+    /models
+        squad
+        classification
+
+    (no reason for these to be separate)
+
+
+Convert to regular logger? (Instead of tf.logger)
+
+Redo reading samples
+
+Redo writing predictions
+
+Make small testing train sample when refactoring trianing abstractions
+
