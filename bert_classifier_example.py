@@ -2,7 +2,6 @@
 
 import os
 
-"""
 from critical_path.BERT.configs import ConfigClassifier
 
 import critical_path.BERT.tokenization as tokenization
@@ -11,13 +10,15 @@ import critical_path.BERT.modeling as modeling
 from critical_path.BERT.classifier import model_fn_builder
 from critical_path.BERT.classifier import file_based_convert_examples_to_features
 from critical_path.BERT.classifier import file_based_input_fn_builder
+from critical_path.BERT.classifier import ColaProcessor
 
 import tensorflow as tf
-"""
+
 
 from critical_path.BERT.classifier import OneLabelColumnProcessor
 
 import pandas as pd
+
 
 def read():
     data_dir = "../data/class_data/"
@@ -41,11 +42,7 @@ def read():
         input_labels=input_labels)
 
 
-
-
-
-
-def ok():
+def train_classifier():
     tf.logging.set_verbosity(tf.logging.INFO)
 
     # Set flags
@@ -54,29 +51,33 @@ def ok():
     name_of_vocab_file = "vocab.txt"
     output_folder_path = base_model_folder_path + "class_model"
     
+    data_dir = '../data/class_data/cola_public/raw/'
+
     Flags = ConfigClassifier()
+    Flags.set_task(
+        task_name='cola',  # THIS IS THE TOGGLE FOR THE DATA LOADING CLASS
+        do_train=True)
     Flags.set_model_paths(
         bert_config_file=base_model_folder_path + name_of_config_json_file,
         bert_vocab_file=base_model_folder_path + name_of_vocab_file,
-        bert_output_dir=output_folder_path)
+        bert_output_dir=output_folder_path,
+        data_dir=data_dir)
 
     Flags.set_model_params(
         batch_size_train=4,  # Move to .train()
         batch_size_eval=4,  # Note, need to move to .predict()
+        batch_size_predict=4, # not sure the difference bw this and eval
         max_seq_length=384,
-        max_answer_length=30,
         num_train_epochs=1)
 
     # Create new model
     FLAGS = Flags.get_handle()
 
-
-
     processors = {
         "cola": ColaProcessor,
-        "mnli": MnliProcessor,
-        "mrpc": MrpcProcessor,
-        "xnli": XnliProcessor,
+        #"mnli": MnliProcessor,
+        #"mrpc": MrpcProcessor,
+        #"xnli": XnliProcessor,
     }
 
     if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
@@ -91,19 +92,17 @@ def ok():
             "was only trained up to sequence length %d" %
             (FLAGS.max_seq_length, bert_config.max_position_embeddings))
 
-    tf.gfile.MakeDirs(FLAGS.output_dir)
+    tf.gfile.MakeDirs(FLAGS.bert_output_dir)
 
+    # THIS IS THE TOGGLE FOR THE DATA LOADING CLASS
     task_name = FLAGS.task_name.lower()
-
     if task_name not in processors:
         raise ValueError("Task not found: %s" % (task_name))
 
     processor = processors[task_name]()
 
-    label_list = processor.get_labels()
-
     tokenizer = tokenization.FullTokenizer(
-        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
+        vocab_file=FLAGS.bert_vocab_file, do_lower_case=FLAGS.do_lower_case)
 
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
@@ -114,7 +113,7 @@ def ok():
     run_config = tf.contrib.tpu.RunConfig(
         cluster=tpu_cluster_resolver,
         master=FLAGS.master,
-        model_dir=FLAGS.output_dir,
+        model_dir=FLAGS.bert_output_dir,
         save_checkpoints_steps=FLAGS.save_checkpoints_steps,
         tpu_config=tf.contrib.tpu.TPUConfig(
             iterations_per_loop=FLAGS.iterations_per_loop,
@@ -128,7 +127,7 @@ def ok():
         train_examples = processor.get_train_examples(FLAGS.data_dir)
         num_train_steps = int(
             len(train_examples) /
-            FLAGS.train_batch_size * FLAGS.num_train_epochs)
+            FLAGS.batch_size_train * FLAGS.num_train_epochs)
         num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
     label_list = processor.get_labels()
@@ -149,18 +148,18 @@ def ok():
         use_tpu=FLAGS.use_tpu,
         model_fn=model_fn,
         config=run_config,
-        train_batch_size=FLAGS.train_batch_size,
-        eval_batch_size=FLAGS.eval_batch_size,
-        predict_batch_size=FLAGS.predict_batch_size)
+        train_batch_size=FLAGS.batch_size_train,
+        eval_batch_size=FLAGS.batch_size_eval,
+        predict_batch_size=FLAGS.batch_size_predict)
 
     if FLAGS.do_train:
-        train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
+        train_file = os.path.join(FLAGS.bert_output_dir, "train.tf_record")
         file_based_convert_examples_to_features(
             train_examples, label_list,
             FLAGS.max_seq_length, tokenizer, train_file)
         tf.logging.info("***** Running training *****")
         tf.logging.info("  Num examples = %d", len(train_examples))
-        tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
+        tf.logging.info("  Batch size = %d", FLAGS.batch_size_train)
         tf.logging.info("  Num steps = %d", num_train_steps)
         train_input_fn = file_based_input_fn_builder(
             input_file=train_file,
@@ -172,4 +171,5 @@ def ok():
 
 
 if __name__ == "__main__":
-    read()
+    #read()
+    train_classifier()

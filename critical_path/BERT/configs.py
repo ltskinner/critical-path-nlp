@@ -292,14 +292,29 @@ class ConfigClassifier(ConfigBase):
         print("[!] NEed to modify for offline processing")
 
     def set_task(self,
+                 task_name=False,
+                 do_train=False,
                  do_eval=False,
                  do_predict=False):
         """Set whether training, evaluating, or predicting"""
 
+        
+        # THIS IS THE TOGGLE FOR THE DATA LOADING CLASS
         # Define classification task
         self.flags.DEFINE_string(
-            "task_name", None,
+            "task_name", task_name,
             "The name of the task to train.")
+        
+
+
+
+
+
+
+        # Task configuration
+        self.flags.DEFINE_bool(
+            "do_train", do_train,
+            "Whether to run eval on the dev set.")
 
         # Task configuration
         self.flags.DEFINE_bool(
@@ -315,7 +330,7 @@ class ConfigClassifier(ConfigBase):
                         *args, **kwargs):
         # Classification specific files
         self.flags.DEFINE_string(
-            "data_dir", None,
+            "data_dir", data_dir,
             "The input data dir. Should contain the .tsv files "
             "(or other data files) for the task.")
 
