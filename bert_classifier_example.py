@@ -178,3 +178,5 @@ if __name__ == "__main__":
     print("... use if 'dev' --> 'eval'")
 
     print("[+] Remember to pep8 stuff")
+
+    print("[!] inheritance for ModelObjects")
