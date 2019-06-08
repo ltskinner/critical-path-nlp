@@ -32,35 +32,45 @@ class ConfigBase(object):
         self.set_tpu_gpu(*args, **kwargs)
 
     def set_model_paths(self,
-                  bert_config_file=None,
-                  bert_vocab_file=None,
-                  bert_output_dir=None,
-                  *args, **kwargs):
+                        bert_config_file=None,
+                        bert_vocab_file=None,
+                        bert_output_dir=None,
+                        trained_model_dir=None,
+                        *args, **kwargs):
         """Paths to support files required for BERT to run"""
         self.flags.DEFINE_string(
             "bert_config_file", bert_config_file,
-            "The config json file corresponding to the pre-trained BERT " +
+            "The config json file corresponding to the pre-trained BERT "
             "model. This specifies the model architecture.")
 
         self.flags.DEFINE_string(
             "bert_vocab_file", bert_vocab_file,
             "The vocabulary file that the BERT model was trained on.")
 
+        if bert_output_dir is None and trained_model_dir is None:
+            raise ValueError("Please specify either 'bert_output_dir', or "
+                             "trained_model_dir")
+        if bert_output_dir is not None and trained_model_dir is not None:
+            raise ValueError("Please specify only 'bert_output_dir', or "
+                             "only 'trained_model_dir'")
+
+        if trained_model_dir is not None:
+            bert_output_dir = trained_model_dir
         self.flags.DEFINE_string(
             "bert_output_dir", bert_output_dir,
             "The output directory where the model checkpoints will be written")
 
     def set_model_params(self,
-                            init_checkpoint=None,
-                            do_lower_case=True,
-                            max_seq_length=128,
-                            warmup_proportion=0.1,
-                            save_checkpoints_steps=1000,
-                            iterations_per_loop=1000,
-                            num_train_epochs=3.0,
-                            batch_size_train=32,
-                            batch_size_predict=8,
-                            learning_rate=3e-5):
+                         init_checkpoint=None,
+                         do_lower_case=True,
+                         max_seq_length=128,
+                         warmup_proportion=0.1,
+                         save_checkpoints_steps=1000,
+                         iterations_per_loop=1000,
+                         num_train_epochs=3.0,
+                         batch_size_train=32,
+                         batch_size_predict=8,
+                         learning_rate=3e-5):
         """BERT model parameters"""
         self.flags.DEFINE_string(
             "init_checkpoint", init_checkpoint,

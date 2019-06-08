@@ -148,7 +148,6 @@ class FeatureWriter(object):
 def read_squad_examples(input_file, is_training,
                         is_squad_v2=False):
     """Read a SQuAD json file into a list of SquadExample."""
-    print("Reading from tf.gfile, switch to not that")
     with tf.gfile.Open(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
 
@@ -488,13 +487,17 @@ def _check_is_max_context(doc_spans, cur_span_index, position):
 
 def write_squad_predictions(all_examples, all_features, all_results,
                             n_best_size, max_answer_length, do_lower_case,
-                            output_prediction_file,
-                            output_nbest_file, output_null_log_odds_file,
+                            output_folder,
                             is_squad_v2=False,
                             null_score_diff_threshold=0.0,
                             verbose_logging=False):
     """Write final predictions to the json file and log-odds of null if needed.
     """
+    tf.gfile.MakeDirs(output_folder)
+    output_prediction_file = os.path.join(output_folder, "predictions.json")
+    output_nbest_file = os.path.join(output_folder, "nbest_predictions.json")
+    output_null_log_odds_file = os.path.join(output_folder, "null_odds.json")
+
     tf.logging.info("Writing predictions to: %s" % (output_prediction_file))
     tf.logging.info("Writing nbest to: %s" % (output_nbest_file))
 
@@ -686,6 +689,13 @@ def write_squad_predictions(all_examples, all_features, all_results,
         with tf.gfile.GFile(output_null_log_odds_file, "w") as writer:
             writer.write(json.dumps(scores_diff_json, indent=4) + "\n")
 
+    formatted_results = {
+        'all_predictions': all_predictions,
+        'all_nbest_json': all_nbest_json,
+        'scores_diff_json': scores_diff_json
+    }
+    return formatted_results
+
 
 def get_final_text(pred_text, orig_text, do_lower_case,
                    verbose_logging=False):
@@ -867,7 +877,6 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
                      use_one_hot_embeddings):
     """Returns `model_fn` closure for TPUEstimator."""
 
-    print("yea nope")
     def model_fn(features, labels, mode, params):
         """The `model_fn` for TPUEstimator."""
 
@@ -959,7 +968,7 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
                 "Only TRAIN and PREDICT modes are supported: %s" % (mode))
 
         return output_spec
-    print("mk")
+    
     return model_fn
 
 
@@ -1016,7 +1025,7 @@ def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
 class SQuADModel():
     def __init__(self, FLAGS):
         tf.logging.set_verbosity(tf.logging.INFO)
-        self.FLAGS=FLAGS
+        self.FLAGS = FLAGS
         self.bert_config = BertConfig.from_json_file(
             self.FLAGS.bert_config_file)
 
@@ -1029,8 +1038,6 @@ class SQuADModel():
             do_lower_case=self.FLAGS.do_lower_case)
 
     def _init_estimator(self, train_samples):
-        print(self.bert_config)
-        print(model_fn_builder)
         self.estimator = modeling.init_model(
             self.bert_config, self.FLAGS,
             model_fn_builder=model_fn_builder,
@@ -1039,6 +1046,7 @@ class SQuADModel():
     def init_model(self):
         self.bert_config.validate_input_size(self.FLAGS)
         tf.gfile.MakeDirs(self.FLAGS.bert_output_dir)
+
         tokenization.validate_word_cases(
             self.FLAGS.do_lower_case, self.FLAGS.init_checkpoint)
 
@@ -1046,6 +1054,7 @@ class SQuADModel():
             self._init_tokenizer()
 
     def train(self, train_samples):
+
         if train_samples is None:
             raise ValueError("train_samples is None."
                              " Please pass in the training samples")
@@ -1082,8 +1091,9 @@ class SQuADModel():
             is_training=True,
             drop_remainder=True)
 
-        self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
-    
+        self.estimator.train(input_fn=train_input_fn, 
+                             max_steps=num_train_steps)
+
     def predict(self, eval_samples):
         self.init_model()
         if self.estimator is None:
