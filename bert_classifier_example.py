@@ -4,21 +4,12 @@ import os
 
 from critical_path.BERT.configs import ConfigClassifier
 
-import critical_path.BERT.tokenization as tokenization
-import critical_path.BERT.modeling as modeling
+from critical_path.BERT.model_classifier import ClassifierModel
+from critical_path.BERT.model_classifier import ColaProcessor
+from critical_path.BERT.model_classifier import OneLabelColumnProcessor
 
-from critical_path.BERT.classifier import model_fn_builder
-from critical_path.BERT.classifier import file_based_convert_examples_to_features
-from critical_path.BERT.classifier import file_based_input_fn_builder
-from critical_path.BERT.classifier import ColaProcessor
 
 import tensorflow as tf
-
-
-from critical_path.BERT.classifier import OneLabelColumnProcessor
-from critical_path.BERT.classifier import PaddingInputExample
-from critical_path.BERT.classifier import ClassifierModel
-
 import pandas as pd
 
 

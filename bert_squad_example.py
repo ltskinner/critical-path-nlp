@@ -12,9 +12,9 @@ import os
 
 from critical_path.BERT.configs import ConfigSQuAD
 
-from critical_path.BERT.squad import SQuADModel
-from critical_path.BERT.squad import input_fn_builder, model_fn_builder
-from critical_path.BERT.squad import read_squad_examples, write_squad_predictions
+from critical_path.BERT.model_squad import SQuADModel
+from critical_path.BERT.model_squad import input_fn_builder, model_fn_builder
+from critical_path.BERT.model_squad import read_squad_examples, write_squad_predictions
 
 
 import six
@@ -97,7 +97,7 @@ def eval_on_squad():
 
 
 if __name__ == '__main__':
-    train_on_squad()
-    #eval_on_squad()
+    #train_on_squad()
+    eval_on_squad()
 
 
