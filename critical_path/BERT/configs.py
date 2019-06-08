@@ -168,7 +168,7 @@ class ConfigBase(object):
 class ConfigSQuAD(ConfigBase):
     """Configuration flags specific to SQuAD implementations of BERT"""
     def __init__(self,
-                *args, **kwargs):
+                 *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def set_task(self,
@@ -184,9 +184,9 @@ class ConfigSQuAD(ConfigBase):
             "Whether to run eval on the dev set.")
 
     def set_model_paths(self,
-                  file_to_train=None,
-                  file_to_predict=None,
-                  *args, **kwargs):
+                        file_to_train=None,
+                        file_to_predict=None,
+                        *args, **kwargs):
         """Set SQuAD specific files, in addition to BERT files"""
         self.flags.DEFINE_string(
             "file_to_train", file_to_train,
@@ -200,14 +200,14 @@ class ConfigSQuAD(ConfigBase):
         ConfigBase.set_model_paths(self, *args, **kwargs)
 
     def set_model_params(self,
-                            doc_stride=128,
-                            max_query_length=64,
-                            n_best_size=20,
-                            max_answer_length=30,
-                            is_squad_v2=False,
-                            verbose_logging=False,
-                            null_score_diff_threshold=0.0,
-                            *args, **kwargs):
+                         doc_stride=128,
+                         max_query_length=64,
+                         n_best_size=20,
+                         max_answer_length=30,
+                         is_squad_v2=False,
+                         verbose_logging=False,
+                         null_score_diff_threshold=0.0,
+                         *args, **kwargs):
         """Set SQuAD training params"""
         self.flags.DEFINE_integer(
             "doc_stride", doc_stride,
@@ -229,7 +229,7 @@ class ConfigSQuAD(ConfigBase):
             "The maximum length of an answer that can be generated. This is "
             "needed because the start and end predictions are not "
             "conditioned on one another")
-        
+
         """Set non technical SQuAD specific configurations"""
         self.flags.DEFINE_bool(
             "verbose_logging", verbose_logging,
@@ -280,8 +280,8 @@ class ConfigSQuAD(ConfigBase):
 
         ConfigBase.validate_flags_and_config(self)
 
-'''
-class ConfigClassification(ConfigBase):
+
+class ConfigClassifier(ConfigBase):
     """Configuration flags specific to Classification implementations of BERT
     """
     def __init__(self,):
@@ -310,32 +310,30 @@ class ConfigClassification(ConfigBase):
             "do_predict", do_predict,
             "Whether to run the model in inference mode on the test set.")
 
-    def set_paths(self,
-                  data_dir=None,
-                  *args, **kwargs):
+    def set_model_paths(self,
+                        data_dir=None,
+                        *args, **kwargs):
         # Classification specific files
         self.flags.DEFINE_string(
             "data_dir", None,
             "The input data dir. Should contain the .tsv files "
             "(or other data files) for the task.")
 
-        ConfigBase.set_paths(self, *args, **kwargs)
+        ConfigBase.set_model_paths(self, *args, **kwargs)
 
-    def set_training_params(self,
-                            batch_size_eval=8,
-                            *args, **kwargs):
+    def set_model_params(self,
+                         batch_size_eval=8,
+                         *args, **kwargs):
         # Training Parameter
         self.flags.DEFINE_integer(
             "batch_size_eval", batch_size_eval,
             "Total batch size for eval.")
 
-        ConfigBase.set_training_params(self, *args, **kwargs)
+        ConfigBase.set_model_params(self, *args, **kwargs)
 
-    def use_defaults(self,):
-        """Use all default params"""
-        self.set_training_params()
-
-        ConfigBase.use_defaults(self)
+    def get_handle(self):
+        self.validate_flags_and_config()
+        return ConfigBase.get_handle(self)
 
     def validate_flags_or_throw(self,):
         """Validate the input FLAGS or throw an exception."""
@@ -345,4 +343,3 @@ class ConfigClassification(ConfigBase):
             raise ValueError(
                 "At least one of `do_train`, `do_eval` or `do_predict'" +
                 " must be True.")
-'''
