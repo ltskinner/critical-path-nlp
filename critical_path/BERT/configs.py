@@ -20,10 +20,18 @@ import tensorflow as tf
 class ConfigBase(object):
     """Configuration flags required in all BERT implementations"""
 
-    def __init__(self,):
+    def __init__(self,
+                 use_tpu=False,
+                 tpu_name=None,
+                 tpu_zone=None,
+                 gcp_project=None,
+                 master=None,
+                 num_tpu_cores=8,
+                 *args, **kwargs):
         self.flags = tf.flags
+        self.set_tpu_gpu(*args, **kwargs)
 
-    def set_paths(self,
+    def set_model_paths(self,
                   bert_config_file=None,
                   bert_vocab_file=None,
                   bert_output_dir=None,
@@ -42,7 +50,7 @@ class ConfigBase(object):
             "bert_output_dir", bert_output_dir,
             "The output directory where the model checkpoints will be written")
 
-    def set_training_params(self,
+    def set_model_params(self,
                             init_checkpoint=None,
                             do_lower_case=True,
                             max_seq_length=128,
@@ -104,7 +112,8 @@ class ConfigBase(object):
                     tpu_zone=None,
                     gcp_project=None,
                     master=None,
-                    num_tpu_cores=8):
+                    num_tpu_cores=8,
+                    *args, **kwargs):
         """TPU or GPU/CPU Configuration"""
         self.flags.DEFINE_bool(
             "use_tpu", use_tpu,
@@ -136,8 +145,9 @@ class ConfigBase(object):
             "num_tpu_cores", num_tpu_cores,
             "Only used if `use_tpu` is True. Total number of TPU cores to use")
 
-    def use_defaults(self):
-        self.set_tpu_gpu()
+    def get_handle(self):
+        self.validate_flags_and_config()
+        return self.flags.FLAGS
 
     def validate_flags_and_config(self,):
         self.flags.mark_flag_as_required("bert_vocab_file")
@@ -147,8 +157,9 @@ class ConfigBase(object):
 
 class ConfigSQuAD(ConfigBase):
     """Configuration flags specific to SQuAD implementations of BERT"""
-    def __init__(self,):
-        super().__init__()
+    def __init__(self,
+                *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def set_task(self,
                  do_train=False,
@@ -162,7 +173,7 @@ class ConfigSQuAD(ConfigBase):
             "do_predict", do_predict,
             "Whether to run eval on the dev set.")
 
-    def set_paths(self,
+    def set_model_paths(self,
                   file_to_train=None,
                   file_to_predict=None,
                   *args, **kwargs):
@@ -176,34 +187,16 @@ class ConfigSQuAD(ConfigBase):
             "SQuAD json for predictions. " +
             "E.g., dev-v1.1.json or test-v1.1.json")
 
-        ConfigBase.set_paths(self, *args, **kwargs)
+        ConfigBase.set_model_paths(self, *args, **kwargs)
 
-    def set_run_configs(self,
-                        verbose_logging=False,
-                        is_squad_v2=False,
-                        null_score_diff_threshold=0.0):
-        """Set non technical SQuAD specific configurations"""
-        self.flags.DEFINE_bool(
-            "verbose_logging", verbose_logging,
-            "If true, all of the warnings related to data processing will "
-            "be printed. A number of warnings are expected for a normal "
-            "SQuAD evaluation.")
-
-        self.flags.DEFINE_bool(
-            "is_squad_v2", is_squad_v2,
-            "If true, the SQuAD examples contain some that do not have an "
-            "answer.")
-
-        self.flags.DEFINE_float(
-            "null_score_diff_threshold", null_score_diff_threshold,
-            "If null_score - best_non_null is greater than the threshold "
-            "predict null")
-
-    def set_training_params(self,
+    def set_model_params(self,
                             doc_stride=128,
                             max_query_length=64,
                             n_best_size=20,
                             max_answer_length=30,
+                            is_squad_v2=False,
+                            verbose_logging=False,
+                            null_score_diff_threshold=0.0,
                             *args, **kwargs):
         """Set SQuAD training params"""
         self.flags.DEFINE_integer(
@@ -226,20 +219,34 @@ class ConfigSQuAD(ConfigBase):
             "The maximum length of an answer that can be generated. This is "
             "needed because the start and end predictions are not "
             "conditioned on one another")
+        
+        """Set non technical SQuAD specific configurations"""
+        self.flags.DEFINE_bool(
+            "verbose_logging", verbose_logging,
+            "If true, all of the warnings related to data processing will "
+            "be printed. A number of warnings are expected for a normal "
+            "SQuAD evaluation.")
 
-        ConfigBase.set_training_params(self, *args, **kwargs)
+        self.flags.DEFINE_bool(
+            "is_squad_v2", is_squad_v2,
+            "If true, the SQuAD examples contain some that do not have an "
+            "answer.")
 
-    def use_defaults(self,):
-        """Use all default params"""
-        self.set_run_configs()
-        self.set_training_params()
+        self.flags.DEFINE_float(
+            "null_score_diff_threshold", null_score_diff_threshold,
+            "If null_score - best_non_null is greater than the threshold "
+            "predict null")
 
-        ConfigBase.use_defaults(self)
+        ConfigBase.set_model_params(self, *args, **kwargs)
+
+    def get_handle(self):
+        self.validate_flags_and_config()
+        return ConfigBase.get_handle(self)
 
     def validate_flags_and_config(self,):
         """Validate the input FLAGS or throw an exception."""
         FLAGS = self.flags.FLAGS
-
+        """
         if not FLAGS.do_train and not FLAGS.do_predict:
             raise ValueError("At least one of `do_train` or `do_predict` "
                              "must be True.")
@@ -254,7 +261,7 @@ class ConfigSQuAD(ConfigBase):
                 raise ValueError(
                     "If `do_predict` is True, "
                     "then `file_to_predict` must be specified.")
-
+        """
         if FLAGS.max_seq_length <= FLAGS.max_query_length + 3:
             raise ValueError(
                 "The max_seq_length (%d) must be greater "
@@ -263,7 +270,7 @@ class ConfigSQuAD(ConfigBase):
 
         ConfigBase.validate_flags_and_config(self)
 
-
+'''
 class ConfigClassification(ConfigBase):
     """Configuration flags specific to Classification implementations of BERT
     """
@@ -328,3 +335,4 @@ class ConfigClassification(ConfigBase):
             raise ValueError(
                 "At least one of `do_train`, `do_eval` or `do_predict'" +
                 " must be True.")
+'''

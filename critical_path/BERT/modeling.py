@@ -34,21 +34,29 @@ def init_model(bert_config, FLAGS,
     # ------------------------- Init all these bois
     # Start processing
     # TODO: Wrap TPU handling
-
+    """
     if FLAGS.do_train and (train_samples is None):
         raise ValueError("'do_train' is True, yet train_samples is None."
                          " Please pass in the training samples")
-    
+    """
     if model_fn_builder is None:
       raise ValueError("Please import and specify model task"
                        "e.g. import squad_fn_builder")
 
     num_train_steps, num_warmup_steps = find_steps(train_samples, FLAGS)
+    print("nums:", num_train_steps, num_warmup_steps)
 
     tpu_cluster_resolver = None
     if FLAGS.use_tpu and FLAGS.tpu_name:
         tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
             FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+
+
+    print(tpu_cluster_resolver)
+    print(FLAGS.master)
+    print(FLAGS.bert_output_dir)
+    print(FLAGS.save_checkpoints_steps)
+    print("-", FLAGS.iterations_per_loop)
 
     is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
     run_config = tf.contrib.tpu.RunConfig(
@@ -61,6 +69,16 @@ def init_model(bert_config, FLAGS,
             num_shards=FLAGS.num_tpu_cores,
             per_host_input_for_training=is_per_host))
 
+    print(run_config)
+    print("after run_config")
+    print(bert_config)
+    print(FLAGS.init_checkpoint)
+    print(FLAGS.learning_rate)
+    print(num_train_steps)  # Needs to know 
+    print(num_warmup_steps)
+    print(FLAGS.use_tpu)
+    print(FLAGS.use_tpu)
+
     # Model initialization
     model_fn = model_fn_builder(
         bert_config=bert_config,
@@ -71,14 +89,23 @@ def init_model(bert_config, FLAGS,
         use_tpu=FLAGS.use_tpu,
         use_one_hot_embeddings=FLAGS.use_tpu)
 
+    print("pre estimator")
     # If TPU is not available, this will fall back to normal Estimator on CPU
     # or GPU.
+    print(FLAGS.use_tpu)
+    print(model_fn)
+    print(run_config)
+    print(FLAGS.batch_size_train)
+    print(FLAGS.batch_size_predict)
     estimator = tf.contrib.tpu.TPUEstimator(
         use_tpu=FLAGS.use_tpu,
         model_fn=model_fn,
         config=run_config,
         train_batch_size=FLAGS.batch_size_train,
         predict_batch_size=FLAGS.batch_size_predict)
+
+    print("----------")
+    print(estimator)
 
     return estimator
 
