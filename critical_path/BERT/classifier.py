@@ -25,6 +25,9 @@ import sys
 import critical_path.BERT.modeling as modeling
 import critical_path.BERT.optimization as optimization
 import critical_path.BERT.tokenization as tokenization
+
+from critical_path.BERT.modeling import BertConfig
+
 import tensorflow as tf
 
 
@@ -47,6 +50,7 @@ class InputExample(object):
         self.text_b = text_b
         self.label = label
 
+
 class PaddingInputExample(object):
     """Fake example so the num input examples is a multiple of the batch size.
     When running eval/predict on the TPU, we need to pad the number of examples
@@ -56,6 +60,7 @@ class PaddingInputExample(object):
     We use this class instead of `None` because treating `None` as padding
     battches could cause silent errors.
     """
+
 
 class InputFeatures(object):
     """A single set of features of data."""
@@ -121,7 +126,7 @@ class ColaProcessor(DataProcessor):
 
     def get_labels(self):
         """See base class."""
-        return ["0", "1"]
+        return ["0", "1", "2"]
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
@@ -160,10 +165,14 @@ class OneLabelColumnProcessor(DataProcessor):
                                      input_labels,
                                      "train")
 
-    def get_dev_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+    def get_eval_examples(self,
+                          input_ids=[],
+                          input_text=[],
+                          input_labels=[]):
+        return self._create_examples(input_ids,
+                                     input_text,
+                                     input_labels,
+                                     "eval")
 
     def get_test_examples(self,
                           input_ids=[],
@@ -189,9 +198,6 @@ class OneLabelColumnProcessor(DataProcessor):
                              text_a=text,  # Base input text
                              text_b=None,  # Secondary sequence for seq2seq?
                              label=label))
-
-
-
 
 
 def file_based_convert_examples_to_features(
@@ -265,11 +271,11 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
             d = d.repeat()
             d = d.shuffle(buffer_size=100)
 
-            d = d.apply(
-                tf.contrib.data.map_and_batch(
-                    lambda record: _decode_record(record, name_to_features),
-                    batch_size=batch_size,
-                    drop_remainder=drop_remainder))
+        d = d.apply(
+            tf.contrib.data.map_and_batch(
+                lambda record: _decode_record(record, name_to_features),
+                batch_size=batch_size,
+                drop_remainder=drop_remainder))
 
         return d
 
@@ -553,7 +559,6 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
     def model_fn(features, labels, mode, params):
         """The `model_fn` for TPUEstimator."""
-
         tf.logging.info("*** Features ***")
         for name in sorted(features.keys()):
             tf.logging.info("  name = %s, shape = %s" %
@@ -648,4 +653,180 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     return model_fn
 
 
+class ClassifierModel():
+    def __init__(self, FLAGS):
+        tf.logging.set_verbosity(tf.logging.INFO)
+        self.FLAGS = FLAGS
+        self.bert_config = BertConfig.from_json_file(
+            self.FLAGS.bert_config_file)
+        tf.gfile.MakeDirs(self.FLAGS.bert_output_dir)
 
+        self.tokenizer = None
+        self.estimator = None
+        
+        self._validate_params()
+        self._init_tokenizer()
+
+        self.num_train_steps = None
+        self.num_warmup_steps = None
+
+    def _validate_params(self):
+        self.bert_config.validate_input_size(self.FLAGS)
+        tokenization.validate_word_cases(
+            self.FLAGS.do_lower_case, self.FLAGS.init_checkpoint)
+
+    def _init_tokenizer(self):
+        self.tokenizer = tokenization.FullTokenizer(
+            vocab_file=self.FLAGS.bert_vocab_file, 
+            do_lower_case=self.FLAGS.do_lower_case)
+
+    def _find_steps(self, train_samples):
+        if train_samples is not None:
+            self.num_train_steps = int(
+                len(train_samples) /
+                self.FLAGS.batch_size_train * self.FLAGS.num_train_epochs)
+            self.num_warmup_steps = int(self.num_train_steps *
+                                        self.FLAGS.warmup_proportion)
+
+    def _init_estimator(self, train_samples):
+        self._find_steps(train_samples)
+
+        model_fn = model_fn_builder(
+            bert_config=self.bert_config,
+            num_labels=len(self.label_list),
+            init_checkpoint=self.FLAGS.init_checkpoint,
+            learning_rate=self.FLAGS.learning_rate,
+            num_train_steps=self.num_train_steps,
+            num_warmup_steps=self.num_warmup_steps,
+            use_tpu=self.FLAGS.use_tpu,
+            use_one_hot_embeddings=self.FLAGS.use_tpu)
+
+        self.estimator = modeling.init_model(
+            self.bert_config, self.FLAGS,
+            model_fn=model_fn,
+            train_samples=train_samples)
+
+    def train(self, train_samples, label_list):
+        self.label_list = label_list
+        if train_samples is None:
+            raise ValueError("train_samples is None."
+                             " Please pass in the training samples")
+
+        if self.estimator is None:
+            self._init_estimator(train_samples=train_samples)
+
+        train_file = os.path.join(self.FLAGS.bert_output_dir, "train.tf_record")
+        file_based_convert_examples_to_features(
+            train_samples, label_list,
+            self.FLAGS.max_seq_length, self.tokenizer, train_file)
+        tf.logging.info("***** Running training *****")
+        tf.logging.info("  Num examples = %d", len(train_samples))
+        tf.logging.info("  Batch size = %d", self.FLAGS.batch_size_train)
+        tf.logging.info("  Num steps = %d", self.num_train_steps)
+        train_input_fn = file_based_input_fn_builder(
+            input_file=train_file,
+            seq_length=self.FLAGS.max_seq_length,
+            is_training=True,
+            drop_remainder=True)
+
+        self.estimator.train(input_fn=train_input_fn, 
+                             max_steps=self.num_train_steps)
+
+    def eval(self, eval_samples, label_list):
+        self.label_list = label_list
+        if eval_samples is None:
+            raise ValueError("train_samples is None."
+                             " Please pass in the training samples")
+
+        if self.estimator is None:
+            self._init_estimator(train_samples=eval_samples)
+
+        # This tells the estimator to run through the entire set.
+        eval_steps = None
+        num_actual_eval_samples = len(eval_samples)
+        if self.FLAGS.use_tpu:
+            # TPU requires a fixed batch size for all batches, therefore the number
+            # of examples must be a multiple of the batch size, or else examples
+            # will get dropped. So we pad with fake examples which are ignored
+            # later on. These do NOT count towards the metric (all tf.metrics
+            # support a per-instance weight, and these get a weight of 0.0).
+            while len(eval_samples) % self.FLAGS.batch_size_eval != 0:
+                eval_samples.append(PaddingInputExample())
+            
+            # However, if running eval on the TPU, you will need to specify the
+            # number of steps.
+            assert len(eval_samples) % self.FLAGS.batch_size_eval == 0
+            eval_steps = int(len(eval_samples) // self.FLAGS.batch_size_eval)
+
+        eval_file = os.path.join(self.FLAGS.bert_output_dir, "eval.tf_record")
+        file_based_convert_examples_to_features(
+            eval_samples, label_list,
+            self.FLAGS.max_seq_length, self.tokenizer, eval_file)
+
+        tf.logging.info("***** Running evaluation *****")
+        tf.logging.info("  Num examples = %d (%d actual, %d padding)",
+                        len(eval_samples), num_actual_eval_samples,
+                        len(eval_samples) - num_actual_eval_samples)
+        tf.logging.info("  Batch size = %d", self.FLAGS.batch_size_eval)
+
+        eval_drop_remainder = True if self.FLAGS.use_tpu else False
+        eval_input_fn = file_based_input_fn_builder(
+            input_file=eval_file,
+            seq_length=self.FLAGS.max_seq_length,
+            is_training=False,
+            drop_remainder=eval_drop_remainder)
+
+        results = self.estimator.evaluate(input_fn=eval_input_fn, 
+                                          steps=eval_steps)
+        return results
+
+    def predict(self, predict_samples, label_list):
+        self.label_list = label_list
+        if predict_samples is None:
+            raise ValueError("train_samples is None."
+                             " Please pass in the training samples")
+
+        if self.estimator is None:
+            self._init_estimator(train_samples=predict_samples)
+
+        num_actual_predict_samples = len(predict_samples)
+        if self.FLAGS.use_tpu:
+            # TPU requires a fixed batch size for all batches, therefore the number
+            # of examples must be a multiple of the batch size, or else examples
+            # will get dropped. So we pad with fake examples which are ignored
+            # later on.
+            while len(predict_samples) % self.FLAGS.batch_size_predict != 0:
+                predict_samples.append(PaddingInputExample())
+
+        predict_file = os.path.join(self.FLAGS.bert_output_dir, "predict.tf_record")
+        file_based_convert_examples_to_features(predict_samples, label_list,
+                                                self.FLAGS.max_seq_length, self.tokenizer,
+                                                predict_file)
+
+        tf.logging.info("***** Running prediction*****")
+        tf.logging.info("  Num examples = %d (%d actual, %d padding)",
+                        len(predict_samples), num_actual_predict_samples,
+                        len(predict_samples) - num_actual_predict_samples)
+        tf.logging.info("  Batch size = %d", self.FLAGS.batch_size_predict)
+
+        predict_drop_remainder = True if self.FLAGS.use_tpu else False
+        predict_input_fn = file_based_input_fn_builder(
+            input_file=predict_file,
+            seq_length=self.FLAGS.max_seq_length,
+            is_training=False,
+            drop_remainder=predict_drop_remainder)
+
+        raw_results = self.estimator.predict(input_fn=predict_input_fn)
+        print(type(raw_results))
+
+        # Verify results after padding --> routineinize
+        results = []
+        num_written_lines = 0
+        for (i, prediction) in enumerate(raw_results):
+            if i >= num_actual_predict_samples:
+                break
+            results.append(prediction)
+            num_written_lines += 1
+        assert num_written_lines == num_actual_predict_samples
+
+        return results

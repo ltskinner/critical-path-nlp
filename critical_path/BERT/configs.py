@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import tensorflow as tf
 
 
@@ -69,6 +70,7 @@ class ConfigBase(object):
                          iterations_per_loop=1000,
                          num_train_epochs=3.0,
                          batch_size_train=32,
+                         batch_size_eval=8,
                          batch_size_predict=8,
                          learning_rate=3e-5):
         """BERT model parameters"""
@@ -107,6 +109,10 @@ class ConfigBase(object):
         self.flags.DEFINE_integer(
             "batch_size_train", batch_size_train,
             "Total batch size for training.")
+
+        self.flags.DEFINE_integer(
+            "batch_size_eval", batch_size_eval,
+            "Total batch size for eval.")
 
         self.flags.DEFINE_integer(
             "batch_size_predict", batch_size_predict,
@@ -256,22 +262,6 @@ class ConfigSQuAD(ConfigBase):
     def validate_flags_and_config(self,):
         """Validate the input FLAGS or throw an exception."""
         FLAGS = self.flags.FLAGS
-        """
-        if not FLAGS.do_train and not FLAGS.do_predict:
-            raise ValueError("At least one of `do_train` or `do_predict` "
-                             "must be True.")
-
-        if FLAGS.do_train:
-            if not FLAGS.file_to_train:
-                raise ValueError(
-                    "If `do_train` is True, then `file_to_train` must be "
-                    "specified.")
-        if FLAGS.do_predict:
-            if not FLAGS.file_to_predict:
-                raise ValueError(
-                    "If `do_predict` is True, "
-                    "then `file_to_predict` must be specified.")
-        """
         if FLAGS.max_seq_length <= FLAGS.max_query_length + 3:
             raise ValueError(
                 "The max_seq_length (%d) must be greater "
@@ -292,23 +282,19 @@ class ConfigClassifier(ConfigBase):
         print("[!] NEed to modify for offline processing")
 
     def set_task(self,
-                 task_name=False,
+                 #task_name=False,
                  do_train=False,
                  do_eval=False,
                  do_predict=False):
         """Set whether training, evaluating, or predicting"""
 
-        
+        """
         # THIS IS THE TOGGLE FOR THE DATA LOADING CLASS
         # Define classification task
         self.flags.DEFINE_string(
             "task_name", task_name,
             "The name of the task to train.")
-        
-
-
-
-
+        """
 
 
         # Task configuration
@@ -337,13 +323,7 @@ class ConfigClassifier(ConfigBase):
         ConfigBase.set_model_paths(self, *args, **kwargs)
 
     def set_model_params(self,
-                         batch_size_eval=8,
                          *args, **kwargs):
-        # Training Parameter
-        self.flags.DEFINE_integer(
-            "batch_size_eval", batch_size_eval,
-            "Total batch size for eval.")
-
         ConfigBase.set_model_params(self, *args, **kwargs)
 
     def get_handle(self):
@@ -354,7 +334,10 @@ class ConfigClassifier(ConfigBase):
         """Validate the input FLAGS or throw an exception."""
         FLAGS = self.flags.FLAGS
 
+        """
         if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
             raise ValueError(
                 "At least one of `do_train`, `do_eval` or `do_predict'" +
                 " must be True.")
+        """
+        ConfigBase.validate_flags_and_config(self)

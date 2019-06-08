@@ -25,7 +25,7 @@ import critical_path.BERT.tokenization as tokenization
 from critical_path.BERT import modeling
 from critical_path.BERT import optimization
 
-from critical_path.BERT.modeling import BertConfig, find_steps
+from critical_path.BERT.modeling import BertConfig
 
 import six
 import tensorflow as tf
@@ -874,7 +874,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
 def model_fn_builder(bert_config, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
-                     use_one_hot_embeddings):
+                     use_one_hot_embeddings, **kwargs):
     """Returns `model_fn` closure for TPUEstimator."""
 
     def model_fn(features, labels, mode, params):
@@ -1028,30 +1028,52 @@ class SQuADModel():
         self.FLAGS = FLAGS
         self.bert_config = BertConfig.from_json_file(
             self.FLAGS.bert_config_file)
+        tf.gfile.MakeDirs(self.FLAGS.bert_output_dir)
 
         self.tokenizer = None
         self.estimator = None
+
+        self._validate_params()
+        self._init_tokenizer()
+
+        self.num_train_steps = None
+        self.num_warmup_steps = None
+
+    def _validate_params(self):
+        self.bert_config.validate_input_size(self.FLAGS)
+        tokenization.validate_word_cases(
+            self.FLAGS.do_lower_case, self.FLAGS.init_checkpoint)
 
     def _init_tokenizer(self):
         self.tokenizer = tokenization.FullTokenizer(
             vocab_file=self.FLAGS.bert_vocab_file, 
             do_lower_case=self.FLAGS.do_lower_case)
 
+    def _find_steps(self, train_samples):
+        if train_samples is not None:
+            self.num_train_steps = int(
+                len(train_samples) /
+                self.FLAGS.batch_size_train * self.FLAGS.num_train_epochs)
+            self.num_warmup_steps = int(self.num_train_steps * 
+                                        self.FLAGS.warmup_proportion)
+
     def _init_estimator(self, train_samples):
+        self._find_steps(train_samples)
+
+        # Model initialization
+        model_fn = model_fn_builder(
+            bert_config=self.bert_config,
+            init_checkpoint=self.FLAGS.init_checkpoint,
+            learning_rate=self.FLAGS.learning_rate,
+            num_train_steps=self.num_train_steps,  # Needs to know
+            num_warmup_steps=self.num_warmup_steps,
+            use_tpu=self.FLAGS.use_tpu,
+            use_one_hot_embeddings=self.FLAGS.use_tpu)
+
         self.estimator = modeling.init_model(
             self.bert_config, self.FLAGS,
-            model_fn_builder=model_fn_builder,
+            model_fn=model_fn,
             train_samples=train_samples)
-    
-    def init_model(self):
-        self.bert_config.validate_input_size(self.FLAGS)
-        tf.gfile.MakeDirs(self.FLAGS.bert_output_dir)
-
-        tokenization.validate_word_cases(
-            self.FLAGS.do_lower_case, self.FLAGS.init_checkpoint)
-
-        if self.tokenizer is None:
-            self._init_tokenizer()
 
     def train(self, train_samples):
 
@@ -1059,7 +1081,7 @@ class SQuADModel():
             raise ValueError("train_samples is None."
                              " Please pass in the training samples")
 
-        self.init_model()
+        #self.init_model()
         if self.estimator is None:
             self._init_estimator(train_samples=train_samples)
 
@@ -1076,13 +1098,11 @@ class SQuADModel():
             output_fn=train_writer.process_feature)
         train_writer.close()
 
-        num_train_steps, _ = find_steps(train_samples, self.FLAGS)
-
         tf.logging.info("***** Running training *****")
         tf.logging.info("  Num orig examples = %d", len(train_samples))
         tf.logging.info("  Num split examples = %d", train_writer.num_features)
         tf.logging.info("  Batch size = %d", self.FLAGS.batch_size_train)
-        tf.logging.info("  Num steps = %d", num_train_steps)
+        tf.logging.info("  Num steps = %d", self.num_train_steps)
         del train_samples
 
         train_input_fn = input_fn_builder(
@@ -1092,10 +1112,10 @@ class SQuADModel():
             drop_remainder=True)
 
         self.estimator.train(input_fn=train_input_fn, 
-                             max_steps=num_train_steps)
+                             max_steps=self.num_train_steps)
 
     def predict(self, eval_samples):
-        self.init_model()
+        #self.init_model()
         if self.estimator is None:
             self._init_estimator(train_samples=eval_samples)
 

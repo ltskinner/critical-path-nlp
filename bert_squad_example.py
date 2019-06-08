@@ -28,7 +28,7 @@ def train_on_squad():
     base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
     name_of_config_json_file = "bert_config.json"
     name_of_vocab_file = "vocab.txt"
-    output_folder_path = base_model_folder_path + "qa_model"
+    output_folder_path = base_model_folder_path + "um"
     
     Flags = ConfigSQuAD()
     Flags.set_model_paths(
@@ -98,6 +98,6 @@ def eval_on_squad():
 
 if __name__ == '__main__':
     train_on_squad()
-    # eval_on_squad()
+    #eval_on_squad()
 
 

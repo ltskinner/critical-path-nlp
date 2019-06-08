@@ -16,6 +16,8 @@ import tensorflow as tf
 
 
 from critical_path.BERT.classifier import OneLabelColumnProcessor
+from critical_path.BERT.classifier import PaddingInputExample
+from critical_path.BERT.classifier import ClassifierModel
 
 import pandas as pd
 
@@ -43,7 +45,40 @@ def read():
 
 
 def train_classifier():
-    tf.logging.set_verbosity(tf.logging.INFO)
+    # Set flags
+    base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
+    name_of_config_json_file = "bert_config.json"
+    name_of_vocab_file = "vocab.txt"
+    output_folder_path = base_model_folder_path + "class_model"
+    
+    data_dir = '../data/class_data/cola_public/raw/'
+
+    Flags = ConfigClassifier()
+    # TODO: delete this handle from all configs
+    # Flags.set_task(do_train=True)
+    Flags.set_model_paths(
+        bert_config_file=base_model_folder_path + name_of_config_json_file,
+        bert_vocab_file=base_model_folder_path + name_of_vocab_file,
+        bert_output_dir=output_folder_path,
+        data_dir=data_dir)
+
+    Flags.set_model_params(
+        batch_size_train=4,  # Move to .train() ?
+        max_seq_length=384,
+        num_train_epochs=1)
+
+    # Create new model
+    FLAGS = Flags.get_handle()
+    model = ClassifierModel(FLAGS)
+
+    processor = ColaProcessor()
+    train_samples = processor.get_train_examples(FLAGS.data_dir)
+    label_list = processor.get_labels()
+
+    model.train(train_samples, label_list)
+
+
+def eval_classifier():
 
     # Set flags
     base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
@@ -54,9 +89,8 @@ def train_classifier():
     data_dir = '../data/class_data/cola_public/raw/'
 
     Flags = ConfigClassifier()
-    Flags.set_task(
-        task_name='cola',  # THIS IS THE TOGGLE FOR THE DATA LOADING CLASS
-        do_train=True)
+    # TODO: delete this handle from all configs
+    # Flags.set_task(do_train=True)
     Flags.set_model_paths(
         bert_config_file=base_model_folder_path + name_of_config_json_file,
         bert_vocab_file=base_model_folder_path + name_of_vocab_file,
@@ -64,112 +98,83 @@ def train_classifier():
         data_dir=data_dir)
 
     Flags.set_model_params(
-        batch_size_train=4,  # Move to .train()
-        batch_size_eval=4,  # Note, need to move to .predict()
-        batch_size_predict=4, # not sure the difference bw this and eval
+        batch_size_eval=4,  # Note, need to move to .predict() ?
         max_seq_length=384,
         num_train_epochs=1)
 
     # Create new model
     FLAGS = Flags.get_handle()
+    model = ClassifierModel(FLAGS)
 
-    processors = {
-        "cola": ColaProcessor,
-        #"mnli": MnliProcessor,
-        #"mrpc": MrpcProcessor,
-        #"xnli": XnliProcessor,
-    }
-
-    if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
-        raise ValueError(
-            "At least one of `do_train`, `do_eval` or `do_predict' must be True.")
-
-    bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
-
-    if FLAGS.max_seq_length > bert_config.max_position_embeddings:
-        raise ValueError(
-            "Cannot use sequence length %d because the BERT model "
-            "was only trained up to sequence length %d" %
-            (FLAGS.max_seq_length, bert_config.max_position_embeddings))
-
-    tf.gfile.MakeDirs(FLAGS.bert_output_dir)
-
-    # THIS IS THE TOGGLE FOR THE DATA LOADING CLASS
-    task_name = FLAGS.task_name.lower()
-    if task_name not in processors:
-        raise ValueError("Task not found: %s" % (task_name))
-
-    processor = processors[task_name]()
-
-    tokenizer = tokenization.FullTokenizer(
-        vocab_file=FLAGS.bert_vocab_file, do_lower_case=FLAGS.do_lower_case)
-
-    tpu_cluster_resolver = None
-    if FLAGS.use_tpu and FLAGS.tpu_name:
-        tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-            FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
-
-    is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
-    run_config = tf.contrib.tpu.RunConfig(
-        cluster=tpu_cluster_resolver,
-        master=FLAGS.master,
-        model_dir=FLAGS.bert_output_dir,
-        save_checkpoints_steps=FLAGS.save_checkpoints_steps,
-        tpu_config=tf.contrib.tpu.TPUConfig(
-            iterations_per_loop=FLAGS.iterations_per_loop,
-            num_shards=FLAGS.num_tpu_cores,
-            per_host_input_for_training=is_per_host))
-
-    train_examples = None
-    num_train_steps = None
-    num_warmup_steps = None
-    if FLAGS.do_train:
-        train_examples = processor.get_train_examples(FLAGS.data_dir)
-        num_train_steps = int(
-            len(train_examples) /
-            FLAGS.batch_size_train * FLAGS.num_train_epochs)
-        num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
-
+    processor = ColaProcessor()
+    eval_examples = processor.get_dev_examples(FLAGS.data_dir)
     label_list = processor.get_labels()
 
-    model_fn = model_fn_builder(
-        bert_config=bert_config,
-        num_labels=len(label_list),
-        init_checkpoint=FLAGS.init_checkpoint,
-        learning_rate=FLAGS.learning_rate,
-        num_train_steps=num_train_steps,
-        num_warmup_steps=num_warmup_steps,
-        use_tpu=FLAGS.use_tpu,
-        use_one_hot_embeddings=FLAGS.use_tpu)
+    results = model.eval(eval_examples, label_list)
 
-    # If TPU is not available, this will fall back to normal Estimator on CPU
-    # or GPU.
-    estimator = tf.contrib.tpu.TPUEstimator(
-        use_tpu=FLAGS.use_tpu,
-        model_fn=model_fn,
-        config=run_config,
-        train_batch_size=FLAGS.batch_size_train,
-        eval_batch_size=FLAGS.batch_size_eval,
-        predict_batch_size=FLAGS.batch_size_predict)
+    output_eval_file = os.path.join(FLAGS.bert_output_dir, "eval_results.txt")
+    with tf.gfile.GFile(output_eval_file, "w") as writer:
+        tf.logging.info("***** Eval results *****")
+        for key in sorted(results.keys()):
+            tf.logging.info("  %s = %s", key, str(results[key]))
 
-    if FLAGS.do_train:
-        train_file = os.path.join(FLAGS.bert_output_dir, "train.tf_record")
-        file_based_convert_examples_to_features(
-            train_examples, label_list,
-            FLAGS.max_seq_length, tokenizer, train_file)
-        tf.logging.info("***** Running training *****")
-        tf.logging.info("  Num examples = %d", len(train_examples))
-        tf.logging.info("  Batch size = %d", FLAGS.batch_size_train)
-        tf.logging.info("  Num steps = %d", num_train_steps)
-        train_input_fn = file_based_input_fn_builder(
-            input_file=train_file,
-            seq_length=FLAGS.max_seq_length,
-            is_training=True,
-            drop_remainder=True)
 
-        estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+def predict_classifier():
+
+    # Set flags
+    base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
+    name_of_config_json_file = "bert_config.json"
+    name_of_vocab_file = "vocab.txt"
+    output_folder_path = base_model_folder_path + "class_model"
+    
+    data_dir = '../data/class_data/cola_public/raw/'
+
+    Flags = ConfigClassifier()
+    # TODO: delete this handle from all configs
+    # Flags.set_task(do_train=True)
+    Flags.set_model_paths(
+        bert_config_file=base_model_folder_path + name_of_config_json_file,
+        bert_vocab_file=base_model_folder_path + name_of_vocab_file,
+        bert_output_dir=output_folder_path,
+        data_dir=data_dir)
+
+    Flags.set_model_params(
+        batch_size_predict=4,  # not sure the difference bw this and eval
+        max_seq_length=384,
+        num_train_epochs=1)
+
+    # Create new model
+    FLAGS = Flags.get_handle()
+    model = ClassifierModel(FLAGS)
+
+    processor = ColaProcessor()
+    predict_examples = processor.get_test_examples(FLAGS.data_dir)
+    label_list = processor.get_labels()
+
+    results = model.predict(predict_examples, label_list)
+
+
+    # Actually write the results
+    # Basically, each column is the confidence for a label
+    output_predict_file = os.path.join(FLAGS.bert_output_dir, "test_results.tsv")
+    with tf.gfile.GFile(output_predict_file, "w") as writer:
+        tf.logging.info("***** Predict results *****")
+        for (i, prediction) in enumerate(results):
+            probabilities = prediction["probabilities"]
+            output_line = "\t".join(
+                str(class_probability)
+                for class_probability in probabilities) + "\n"
+            writer.write(output_line)
 
 
 if __name__ == "__main__":
     #read()
-    train_classifier()
+    #train_classifier()
+    #eval_classifier()
+    predict_classifier()
+
+    print("[!] uncouple .get_{}_examples()")
+    print("... convert to get_examples(file_path, 'dev')")
+    print("... use if 'dev' --> 'eval'")
+
+    print("[+] Remember to pep8 stuff")
