@@ -23,7 +23,7 @@ def read_data():
     input_text = []
     input_labels = []
 
-    for _, row in df.head(4000).iterrows():
+    for _, row in df.head(1000).iterrows():
         sample_labels = []
         for label in label_list:
             if row[label] == 1:
@@ -178,7 +178,7 @@ if __name__ == '__main__':
     #read()
     #train_multilabel()
     #eval_multilabel()
-    #predict_multilabel()
+    predict_multilabel()
 
 
-    tf.sigmoid([0, 1, 0, 1, 0, 0, 0])
+    #tf.sigmoid([0, 1, 0, 1, 0, 0, 0])

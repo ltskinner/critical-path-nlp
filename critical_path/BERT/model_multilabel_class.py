@@ -183,7 +183,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
             input_ids=[0] * max_seq_length,
             input_mask=[0] * max_seq_length,
             segment_ids=[0] * max_seq_length,
-            label_ids=[0] * len(label_list),
+            label_ids=[-1] * len(label_list),
             is_real_example=False)
 
     tokens_a = tokenizer.tokenize(example.text_a)
@@ -258,7 +258,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
         label_map[label] = i
     # label_ids = label_map[example.labels]  # original
 
-    label_ids = [0] * len(label_list)
+    label_ids = [-1] * len(label_list)
     for label in example.labels:
         index = label_map[label]
         label_ids[index] = 1
@@ -450,6 +450,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 eval_metrics=eval_metrics,
                 scaffold_fn=scaffold_fn)
         else:
+            # tf.sigmoid(logits)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
                 predictions={"probabilities": tf.sigmoid(probabilities)},
