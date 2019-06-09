@@ -1,22 +1,3 @@
-# coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""BERT finetuning runner."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import collections
 import csv
@@ -32,9 +13,7 @@ import tensorflow as tf
 
 
 class InputExample(object):
-    """A single training/test example for simple sequence classification."""
-
-    def __init__(self, guid, text_a, text_b=None, label=None):
+    def __init__(self, guid, text_a, text_b=None, labels=None):
         """Constructs a InputExample.
         Args:
             guid: Unique id for the example.
@@ -48,7 +27,7 @@ class InputExample(object):
         self.guid = guid
         self.text_a = text_a
         self.text_b = text_b
-        self.label = label
+        self.labels = labels  # One hot encoded labels
 
 
 class PaddingInputExample(object):
@@ -69,136 +48,45 @@ class InputFeatures(object):
                  input_ids,
                  input_mask,
                  segment_ids,
-                 label_id,
+                 label_ids,
                  is_real_example=True):
         self.input_ids = input_ids
         self.input_mask = input_mask
         self.segment_ids = segment_ids
-        self.label_id = label_id
+        self.label_ids = label_ids  # One hot encoded labels
         self.is_real_example = is_real_example
 
 
 class DataProcessor(object):
-    """Base class for data converters for sequence classification data sets."""
-
-    def get_train_examples(self, data_dir):
-        """Gets a collection of `InputExample`s for the train set."""
-        raise NotImplementedError()
-
-    def get_dev_examples(self, data_dir):
-        """Gets a collection of `InputExample`s for the dev set."""
-        raise NotImplementedError()
-
-    def get_labels(self):
-        """Gets the list of labels for this data set."""
-        raise NotImplementedError()
-
-    @classmethod
-    def _read_tsv(cls, input_file, quotechar=None):
-        """Reads a tab separated value file."""
-        with open(input_file, "r", encoding="utf-8") as f:
-            reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
-            lines = []
-            for line in reader:
-                if sys.version_info[0] == 2:
-                    line = list(str(cell) for cell in line)
-                lines.append(line)
-            return lines
-
-
-class ColaProcessor(DataProcessor):
-    """Processor for the CoLA data set (GLUE version)."""
-
-    def get_train_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
-
-    def get_dev_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
-
-    def get_test_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
-
-    def get_labels(self):
-        """See base class."""
-        return ["0", "1"]
-
-    def _create_examples(self, lines, set_type):
-        """Creates examples for the training and dev sets."""
-        examples = []
-        for (i, line) in enumerate(lines):
-            # Only the test set has a header
-            if set_type == "test" and i == 0:
-                continue
-            guid = "%s-%s" % (set_type, i)
-            if set_type == "test":
-                text_a = tokenization.convert_to_unicode(line[1])
-                label = "0"
-            else:
-                text_a = tokenization.convert_to_unicode(line[3])
-                label = tokenization.convert_to_unicode(line[1])
-            examples.append(
-                InputExample(guid=guid,
-                             text_a=text_a,
-                             text_b=None,
-                             label=label))
-        return examples
-
-
-class OneLabelColumnProcessor(DataProcessor):
+    """Creates a list of input examples"""
     def __init__(self, label_list=None):
-        if label_list is None:
-            raise ValueError("Please specify a list of label values")
         self.label_list = label_list
 
-    def get_train_examples(self,
-                           input_ids=[],
-                           input_text=[],
-                           input_labels=[]):
-        return self._create_examples(input_ids,
-                                     input_text,
-                                     input_labels,
-                                     "train")
-
-    def get_eval_examples(self,
-                          input_ids=[],
-                          input_text=[],
-                          input_labels=[]):
-        return self._create_examples(input_ids,
-                                     input_text,
-                                     input_labels,
-                                     "eval")
-
-    def get_test_examples(self,
-                          input_ids=[],
-                          input_text=[]):
-        dummy_labels = [0] * len(input_text)
-        return self._create_examples(input_ids,
-                                     input_text,
-                                     dummy_labels,
-                                     "test")
-
-    def get_labels(self):
-        """List of labels for the dataset"""
+    def get_labels(self,):
         return self.label_list
 
+    def get_samples(self,
+                    input_ids=[],
+                    input_text=[],
+                    input_labels=[],
+                    set_type=''):
+        return self._create_examples(input_ids,
+                                     input_text,
+                                     input_labels,
+                                     set_type)
+
     def _create_examples(self, input_ids, input_text, input_labels, set_type):
+        # if set_type == 'test' --> labels = []
         examples = []
         for c, sample in enumerate(zip(input_ids, input_text, input_labels)):
             guid = "%s-%s" % (set_type, str(sample[0]))
             text = str(sample[1])
-            label = str(sample[2])
+            labels = [str(i) for i in sample[2]]
             examples.append(
                 InputExample(guid=guid, 
                              text_a=text,  # Base input text
                              text_b=None,  # Secondary sequence for seq2seq?
-                             label=label))
-
+                             labels=labels))
         return examples
 
 
@@ -225,7 +113,7 @@ def file_based_convert_examples_to_features(
         features["input_ids"] = create_int_feature(feature.input_ids)
         features["input_mask"] = create_int_feature(feature.input_mask)
         features["segment_ids"] = create_int_feature(feature.segment_ids)
-        features["label_ids"] = create_int_feature([feature.label_id])
+        features["label_ids"] = create_int_feature(feature.label_ids)
         features["is_real_example"] = create_int_feature(
             [int(feature.is_real_example)])
 
@@ -237,20 +125,22 @@ def file_based_convert_examples_to_features(
 
 
 def file_based_input_fn_builder(input_file, seq_length, is_training,
-                                drop_remainder):
+                                drop_remainder, num_labels):
     """Creates an `input_fn` closure to be passed to TPUEstimator."""
 
     name_to_features = {
         "input_ids": tf.FixedLenFeature([seq_length], tf.int64),
         "input_mask": tf.FixedLenFeature([seq_length], tf.int64),
         "segment_ids": tf.FixedLenFeature([seq_length], tf.int64),
-        "label_ids": tf.FixedLenFeature([], tf.int64),
+        "label_ids": tf.FixedLenFeature([num_labels], tf.int64),
         "is_real_example": tf.FixedLenFeature([], tf.int64),
     }
 
     def _decode_record(record, name_to_features):
         """Decodes a record to a TensorFlow example."""
         example = tf.parse_single_example(record, name_to_features)
+        print("---------------")
+        print(example)
 
         # tf.Example only supports tf.int64, but the TPU only supports tf.int32
         # So cast all int64 to int32.
@@ -287,18 +177,14 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 def convert_single_example(ex_index, example, label_list, max_seq_length,
                            tokenizer):
     """Converts a single `InputExample` into a single `InputFeatures`."""
-
+    
     if isinstance(example, PaddingInputExample):
         return InputFeatures(
             input_ids=[0] * max_seq_length,
             input_mask=[0] * max_seq_length,
             segment_ids=[0] * max_seq_length,
-            label_id=0,
+            label_ids=[0] * len(label_list),
             is_real_example=False)
-
-    label_map = {}
-    for (i, label) in enumerate(label_list):
-        label_map[label] = i
 
     tokens_a = tokenizer.tokenize(example.text_a)
     tokens_b = None
@@ -366,7 +252,19 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     assert len(input_mask) == max_seq_length
     assert len(segment_ids) == max_seq_length
 
-    label_id = label_map[example.label]
+
+    label_map = {}
+    for (i, label) in enumerate(label_list):
+        label_map[label] = i
+    # label_ids = label_map[example.labels]  # original
+
+    label_ids = [0] * len(label_list)
+    for label in example.labels:
+        index = label_map[label]
+        label_ids[index] = 1
+
+
+
     if ex_index < 5:
         tf.logging.info("*** Example ***")
         tf.logging.info("guid: %s" %
@@ -380,115 +278,17 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
                         " ".join([str(x) for x in input_mask]))
         tf.logging.info("segment_ids: %s" %
                         " ".join([str(x) for x in segment_ids]))
-        tf.logging.info("label: %s (id = %d)" %
-                        (example.label, label_id))
+        tf.logging.info("labels: %s (id = %s)" %
+                        (example.labels, label_ids))
 
     feature = InputFeatures(
         input_ids=input_ids,
         input_mask=input_mask,
         segment_ids=segment_ids,
-        label_id=label_id,
+        label_ids=label_ids,
         is_real_example=True)
 
     return feature
-
-
-def convert_examples_to_features(examples, label_list, max_seq_length,
-                                 tokenizer, output_mode):
-    """Loads a data file into a list of `InputBatch`s."""
-
-    label_map = {label: i for i, label in enumerate(label_list)}
-
-    features = []
-    for (ex_index, example) in enumerate(examples):
-        if ex_index % 10000 == 0:
-            tf.logging.info("Writing example %d of %d" %
-                            (ex_index, len(examples)))
-
-        tokens_a = tokenizer.tokenize(example.text_a)
-
-        tokens_b = None
-        if example.text_b:
-            tokens_b = tokenizer.tokenize(example.text_b)
-            # Modifies `tokens_a` and `tokens_b` in place so that the total
-            # length is less than the specified length.
-            # Account for [CLS], [SEP], [SEP] with "- 3"
-            _truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
-        else:
-            # Account for [CLS] and [SEP] with "- 2"
-            if len(tokens_a) > max_seq_length - 2:
-                tokens_a = tokens_a[:(max_seq_length - 2)]
-
-        # The convention in BERT is:
-        # (a) For sequence pairs:
-        #  tokens:[CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
-        #  type_ids: 0   0  0    0    0     0       0 0    1  1  1  1   1 1
-        # (b) For single sequences:
-        #  tokens:   [CLS] the dog is hairy . [SEP]
-        #  type_ids: 0   0   0   0  0     0 0
-        #
-        # Where "type_ids" are used to indicate whether this is the first
-        # sequence or the second sequence. The embedding vectors for `type=0`
-        # and `type=1` were learned during pre-training and are added to the
-        # wordpiece embedding vector (and position vector). This is not
-        # *strictly* necessary since the [SEP] token unambiguously separates
-        # the sequences, but it makes it easier for the model to learn the
-        # concept of sequences.
-        #
-        # For classification tasks, the first vector (corresponding to [CLS])
-        # is used as as the "sentence vector". Note that this only makes sense
-        # because the entire model is fine-tuned.
-        tokens = ["[CLS]"] + tokens_a + ["[SEP]"]
-        segment_ids = [0] * len(tokens)
-
-        if tokens_b:
-            tokens += tokens_b + ["[SEP]"]
-            segment_ids += [1] * (len(tokens_b) + 1)
-
-        input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
-        input_mask = [1] * len(input_ids)
-
-        # Zero-pad up to the sequence length.
-        padding = [0] * (max_seq_length - len(input_ids))
-        input_ids += padding
-        input_mask += padding
-        segment_ids += padding
-
-        assert len(input_ids) == max_seq_length
-        assert len(input_mask) == max_seq_length
-        assert len(segment_ids) == max_seq_length
-
-        if output_mode == "classification":
-            label_id = label_map[example.label]
-        elif output_mode == "regression":
-            label_id = float(example.label)
-        else:
-            raise KeyError(output_mode)
-
-        if ex_index < 5:
-            tf.logging.info("*** Example ***")
-            tf.logging.info("guid: %s" %
-                            (example.guid))
-            tf.logging.info("tokens: %s" %
-                            " ".join([str(x) for x in tokens]))
-            tf.logging.info("input_ids: %s" %
-                            " ".join([str(x) for x in input_ids]))
-            tf.logging.info("input_mask: %s" %
-                            " ".join([str(x) for x in input_mask]))
-            tf.logging.info("segment_ids: %s" %
-                            " ".join([str(x) for x in segment_ids]))
-            tf.logging.info("label: %s (id = %d)" %
-                            (example.label, label_id))
-
-        features.append(
-                InputFeatures(input_ids=input_ids,
-                              input_mask=input_mask,
-                              segment_ids=segment_ids,
-                              label_id=label_id))
-    return features
 
 
 def _truncate_seq_pair(tokens_a, tokens_b, max_length):
@@ -541,14 +341,17 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
             # I.e., 0.1 dropout
             output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
 
+        one_hot_labels = tf.cast(labels, tf.float32)
+
         logits = tf.matmul(output_layer, output_weights, transpose_b=True)
         logits = tf.nn.bias_add(logits, output_bias)
-        probabilities = tf.nn.softmax(logits, axis=-1)
-        log_probs = tf.nn.log_softmax(logits, axis=-1)
 
-        one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
+        probabilities = tf.nn.sigmoid_cross_entropy_with_logits(
+                                                       logits=logits,
+                                                       labels=one_hot_labels)
 
-        per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
+        per_example_loss = -tf.reduce_sum(one_hot_labels * probabilities,
+                                          axis=-1)
         loss = tf.reduce_mean(per_example_loss)
 
         return (loss, per_example_loss, logits, probabilities)
@@ -579,6 +382,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
+        # Create model here
         (total_loss, per_example_loss, logits, probabilities) = create_model(
             bert_config, is_training,
             input_ids, input_mask,
@@ -626,7 +430,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         elif mode == tf.estimator.ModeKeys.EVAL:
 
             def metric_fn(per_example_loss, label_ids, logits, is_real_example):
-                predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+                predictions = logits
                 accuracy = tf.metrics.accuracy(labels=label_ids,
                                                predictions=predictions,
                                                weights=is_real_example)
@@ -648,14 +452,14 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         else:
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
-                predictions={"probabilities": probabilities},
+                predictions={"probabilities": tf.sigmoid(probabilities)},
                 scaffold_fn=scaffold_fn)
         return output_spec
 
     return model_fn
 
 
-class ClassifierModel(BaseModel):
+class MultiLabelClassifier(BaseModel):
     def __init__(self,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -678,7 +482,7 @@ class ClassifierModel(BaseModel):
             self.bert_config, self.FLAGS,
             model_fn=model_fn,
             train_samples=train_samples)
-
+        
     def train(self, train_samples, label_list):
         self.label_list = label_list
         if train_samples is None:
@@ -687,7 +491,7 @@ class ClassifierModel(BaseModel):
 
         if self.estimator is None:
             self._init_estimator(train_samples=train_samples)
-
+        
         train_file = os.path.join(self.FLAGS.bert_output_dir, "train.tf_record")
         file_based_convert_examples_to_features(
             train_samples, label_list,
@@ -700,11 +504,12 @@ class ClassifierModel(BaseModel):
             input_file=train_file,
             seq_length=self.FLAGS.max_seq_length,
             is_training=True,
-            drop_remainder=True)
+            drop_remainder=True,
+            num_labels=len(self.label_list))
 
-        self.estimator.train(input_fn=train_input_fn, 
+        self.estimator.train(input_fn=train_input_fn,
                              max_steps=self.num_train_steps)
-
+        
     def eval(self, eval_samples, label_list):
         self.label_list = label_list
         if eval_samples is None:
@@ -748,7 +553,8 @@ class ClassifierModel(BaseModel):
             input_file=eval_file,
             seq_length=self.FLAGS.max_seq_length,
             is_training=False,
-            drop_remainder=eval_drop_remainder)
+            drop_remainder=eval_drop_remainder,
+            num_labels=len(self.label_list))
 
         results = self.estimator.evaluate(input_fn=eval_input_fn, 
                                           steps=eval_steps)
@@ -790,7 +596,8 @@ class ClassifierModel(BaseModel):
             input_file=predict_file,
             seq_length=self.FLAGS.max_seq_length,
             is_training=False,
-            drop_remainder=predict_drop_remainder)
+            drop_remainder=predict_drop_remainder,
+            num_labels=len(self.label_list))
 
         raw_results = self.estimator.predict(input_fn=predict_input_fn)
         print(type(raw_results))
