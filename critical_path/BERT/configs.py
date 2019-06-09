@@ -177,18 +177,6 @@ class ConfigSQuAD(ConfigBase):
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def set_task(self,
-                 do_train=False,
-                 do_predict=False):
-        """Set whether training or predicting"""
-        self.flags.DEFINE_bool(
-            "do_train", do_train,
-            "Whether to run training.")
-
-        self.flags.DEFINE_bool(
-            "do_predict", do_predict,
-            "Whether to run eval on the dev set.")
-
     def set_model_paths(self,
                         file_to_train=None,
                         file_to_predict=None,
@@ -274,42 +262,9 @@ class ConfigSQuAD(ConfigBase):
 class ConfigClassifier(ConfigBase):
     """Configuration flags specific to Classification implementations of BERT
     """
-    def __init__(self,):
-        super().__init__()
-        print("[!] ConfigGlass: Need to expand .set_task(), and modify to be")
-        print("... more like ConfigSQuAD handles")
-        print("[!] Need to change .set_path() to accept file not directory")
-        print("[!] NEed to modify for offline processing")
-
-    def set_task(self,
-                 #task_name=False,
-                 do_train=False,
-                 do_eval=False,
-                 do_predict=False):
-        """Set whether training, evaluating, or predicting"""
-
-        """
-        # THIS IS THE TOGGLE FOR THE DATA LOADING CLASS
-        # Define classification task
-        self.flags.DEFINE_string(
-            "task_name", task_name,
-            "The name of the task to train.")
-        """
-
-
-        # Task configuration
-        self.flags.DEFINE_bool(
-            "do_train", do_train,
-            "Whether to run eval on the dev set.")
-
-        # Task configuration
-        self.flags.DEFINE_bool(
-            "do_eval", do_eval,
-            "Whether to run eval on the dev set.")
-
-        self.flags.DEFINE_bool(
-            "do_predict", do_predict,
-            "Whether to run the model in inference mode on the test set.")
+    def __init__(self,
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def set_model_paths(self,
                         data_dir=None,
@@ -333,11 +288,4 @@ class ConfigClassifier(ConfigBase):
     def validate_flags_or_throw(self,):
         """Validate the input FLAGS or throw an exception."""
         FLAGS = self.flags.FLAGS
-
-        """
-        if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
-            raise ValueError(
-                "At least one of `do_train`, `do_eval` or `do_predict'" +
-                " must be True.")
-        """
         ConfigBase.validate_flags_and_config(self)

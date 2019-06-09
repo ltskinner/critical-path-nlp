@@ -25,7 +25,7 @@ import critical_path.BERT.tokenization as tokenization
 from critical_path.BERT import modeling
 from critical_path.BERT import optimization
 
-from critical_path.BERT.modeling import BertConfig
+from critical_path.BERT.modeling import BertConfig, BaseModel
 
 import six
 import tensorflow as tf
@@ -1022,40 +1022,10 @@ def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
     return input_fn
 
 
-class SQuADModel():
-    def __init__(self, FLAGS):
-        tf.logging.set_verbosity(tf.logging.INFO)
-        self.FLAGS = FLAGS
-        self.bert_config = BertConfig.from_json_file(
-            self.FLAGS.bert_config_file)
-        tf.gfile.MakeDirs(self.FLAGS.bert_output_dir)
-
-        self.tokenizer = None
-        self.estimator = None
-
-        self._validate_params()
-        self._init_tokenizer()
-
-        self.num_train_steps = None
-        self.num_warmup_steps = None
-
-    def _validate_params(self):
-        self.bert_config.validate_input_size(self.FLAGS)
-        tokenization.validate_word_cases(
-            self.FLAGS.do_lower_case, self.FLAGS.init_checkpoint)
-
-    def _init_tokenizer(self):
-        self.tokenizer = tokenization.FullTokenizer(
-            vocab_file=self.FLAGS.bert_vocab_file, 
-            do_lower_case=self.FLAGS.do_lower_case)
-
-    def _find_steps(self, train_samples):
-        if train_samples is not None:
-            self.num_train_steps = int(
-                len(train_samples) /
-                self.FLAGS.batch_size_train * self.FLAGS.num_train_epochs)
-            self.num_warmup_steps = int(self.num_train_steps * 
-                                        self.FLAGS.warmup_proportion)
+class SQuADModel(BaseModel):
+    def __init__(self,
+                 *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def _init_estimator(self, train_samples):
         self._find_steps(train_samples)
@@ -1115,7 +1085,7 @@ class SQuADModel():
                              max_steps=self.num_train_steps)
 
     def predict(self, eval_samples):
-        #self.init_model()
+        # self.init_model()
         if self.estimator is None:
             self._init_estimator(train_samples=eval_samples)
 

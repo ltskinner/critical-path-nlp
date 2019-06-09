@@ -24,6 +24,9 @@ import json
 import math
 import re
 import numpy as np
+
+import critical_path.BERT.tokenization as tokenization
+
 import six
 import tensorflow as tf
 
@@ -31,14 +34,7 @@ import tensorflow as tf
 def init_model(bert_config, FLAGS,
                model_fn=None,
                train_samples=None):
-    # ------------------------- Init all these bois
-    # Start processing
-    # TODO: Wrap TPU handling
-    """
-    if FLAGS.do_train and (train_samples is None):
-        raise ValueError("'do_train' is True, yet train_samples is None."
-                         " Please pass in the training samples")
-    """
+
     if model_fn is None:
       raise ValueError("Please specify the model_fn in the model specific"
                        " _init_estimator")
@@ -994,4 +990,41 @@ def assert_rank(tensor, expected_rank, name=None):
     raise ValueError(
         "For the tensor `%s` in scope `%s`, the actual rank "
         "`%d` (shape = %s) is not equal to the expected rank `%s`" %
-(name, scope_name, actual_rank, str(tensor.shape), str(expected_rank)))
+        (name, scope_name, actual_rank, 
+         str(tensor.shape), str(expected_rank)))
+
+class BaseModel(object):
+  def __init__(self, FLAGS):
+    tf.logging.set_verbosity(tf.logging.INFO)
+    self.FLAGS = FLAGS
+    self.bert_config = BertConfig.from_json_file(
+      self.FLAGS.bert_config_file)
+    tf.gfile.MakeDirs(self.FLAGS.bert_output_dir)
+
+    self.tokenizer = None
+    self.estimator = None
+
+    self._validate_params()
+    self._init_tokenizer()
+
+    self.num_train_steps = None
+    self.num_warmup_steps = None
+
+  def _validate_params(self):
+    self.bert_config.validate_input_size(self.FLAGS)
+    tokenization.validate_word_cases(
+        self.FLAGS.do_lower_case, self.FLAGS.init_checkpoint)
+
+  def _init_tokenizer(self):
+    self.tokenizer = tokenization.FullTokenizer(
+      vocab_file=self.FLAGS.bert_vocab_file, 
+      do_lower_case=self.FLAGS.do_lower_case)
+
+  def _find_steps(self, train_samples):
+    if train_samples is not None:
+      self.num_train_steps = int(
+        len(train_samples) /
+        self.FLAGS.batch_size_train * self.FLAGS.num_train_epochs)
+      self.num_warmup_steps = int(self.num_train_steps *
+                                  self.FLAGS.warmup_proportion)
+

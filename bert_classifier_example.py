@@ -29,7 +29,7 @@ def read():
     
     processor = OneLabelColumnProcessor(label_list=label_list)
 
-    results = processor.get_train_examples(
+    training_examples = processor.get_train_examples(
         input_ids=input_ids,
         input_text=input_text,
         input_labels=input_labels)
@@ -168,6 +168,4 @@ if __name__ == "__main__":
     print("... convert to get_examples(file_path, 'dev')")
     print("... use if 'dev' --> 'eval'")
 
-    print("[+] Remember to pep8 stuff")
-
-    print("[!] inheritance for ModelObjects")
+    print("Do example of making your own dataloading class")
