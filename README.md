@@ -12,12 +12,12 @@ Adapted from:
 ## BERT for SQuAD
 
 * Train and evaluate the SQuAD dataset
-  + [SQuAD 2.0] (https://rajpurkar.github.io/SQuAD-explorer/)
+  + [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/)
   
 ## BERT for Multi-Label Classification
 
 * Train and evaluate custom datasets for multi-label classification tasks
 * Example: 
-  + [The Google Toxic Comment Challange] (https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge)
+  +[The Google Toxic Comment Challange](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge)
 
 
