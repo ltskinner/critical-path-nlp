@@ -37,13 +37,24 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 2. Download a pretrained [BERT model](https://github.com/google-research/bert#pre-trained-models) - start with **BERT-Base Uncased** if youre not sure where to begin
 3. Unzip the model and make note of the path
 
-## critial-path-nlp
-* Code examples can be found at:
+## Examples
+* Code:
   + [SQuAD example](..blob/master/bert_squad_example.py)
   + [Multi-Label Classification example](../blob/master/bert_multilabel_example.py)
   + [Single-Label Classification example](../blob/master/bert_classifier_example.py)
   
-
+### Core Components
+#### Configuring BERT
+* There are two main configurations that need to be done:
+  + 1) Paths to models and support files
+    + BERT Base model - the model downloaded from Google
+      + bert_config.json
+      + vocab.txt
+    + Output Directory
+      + Trained models are saved here
+      + Written predictions land here
+  + 2) Model Parameters
+    + sdsd
 
 
 
