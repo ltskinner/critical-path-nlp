@@ -183,7 +183,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
             input_ids=[0] * max_seq_length,
             input_mask=[0] * max_seq_length,
             segment_ids=[0] * max_seq_length,
-            label_ids=[-1] * len(label_list),
+            label_ids=[0] * len(label_list),
             is_real_example=False)
 
     tokens_a = tokenizer.tokenize(example.text_a)
@@ -252,18 +252,15 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     assert len(input_mask) == max_seq_length
     assert len(segment_ids) == max_seq_length
 
-
     label_map = {}
     for (i, label) in enumerate(label_list):
         label_map[label] = i
     # label_ids = label_map[example.labels]  # original
 
-    label_ids = [-1] * len(label_list)
+    label_ids = [0] * len(label_list)
     for label in example.labels:
         index = label_map[label]
         label_ids[index] = 1
-
-
 
     if ex_index < 5:
         tf.logging.info("*** Example ***")
@@ -345,13 +342,12 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
         logits = tf.matmul(output_layer, output_weights, transpose_b=True)
         logits = tf.nn.bias_add(logits, output_bias)
+        probabilities = tf.nn.sigmoid(logits)
 
-        probabilities = tf.nn.sigmoid_cross_entropy_with_logits(
+        per_example_loss = tf.nn.sigmoid_cross_entropy_with_logits(
                                                        logits=logits,
                                                        labels=one_hot_labels)
 
-        per_example_loss = -tf.reduce_sum(one_hot_labels * probabilities,
-                                          axis=-1)
         loss = tf.reduce_mean(per_example_loss)
 
         return (loss, per_example_loss, logits, probabilities)
@@ -430,16 +426,22 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         elif mode == tf.estimator.ModeKeys.EVAL:
 
             def metric_fn(per_example_loss, label_ids, logits, is_real_example):
-                predictions = logits
-                accuracy = tf.metrics.accuracy(labels=label_ids,
-                                               predictions=predictions,
-                                               weights=is_real_example)
-                loss = tf.metrics.mean(values=per_example_loss,
-                                       weights=is_real_example)
-                return {
-                    "eval_accuracy": accuracy,
-                    "eval_loss": loss,
-                }
+                """Source: https://github.com/javaidnabi31/
+                Multi-Label-Text-classification-Using-BERT/
+                blob/master/multi-label-classification-bert.ipynb
+                """
+                logits_split = tf.split(probabilities, num_labels, axis=-1)
+                label_ids_split = tf.split(label_ids, num_labels, axis=-1)
+                # metrics change to auc of every class
+                eval_dict = {}
+                for j, logits in enumerate(logits_split):
+                    label_id_ = tf.cast(label_ids_split[j], dtype=tf.int32)
+                    current_auc, update_op_auc = tf.metrics.auc(
+                        label_id_, logits)
+                    eval_dict[str(j)] = (current_auc, update_op_auc)
+                eval_dict['eval_loss'] = tf.metrics.mean(
+                    values=per_example_loss)
+                return eval_dict
 
             eval_metrics = (metric_fn,
                             [per_example_loss, label_ids,
@@ -450,10 +452,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 eval_metrics=eval_metrics,
                 scaffold_fn=scaffold_fn)
         else:
-            # tf.sigmoid(logits)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
-                predictions={"probabilities": tf.sigmoid(probabilities)},
+                predictions={"probabilities": probabilities},
                 scaffold_fn=scaffold_fn)
         return output_spec
 

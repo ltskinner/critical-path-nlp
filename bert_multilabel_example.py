@@ -4,19 +4,20 @@ import os
 
 from critical_path.BERT.configs import ConfigClassifier
 
-#from critical_path.BERT.model_multilabel_class import ClassifierModel
 from critical_path.BERT.model_multilabel_class import DataProcessor
 from critical_path.BERT.model_multilabel_class import MultiLabelClassifier
-#from critical_path.BERT.model_classifier import OneLabelColumnProcessor
 
+import critical_path.BERT.tokenization as tokenization
+
+import random
 import pandas as pd
 import tensorflow as tf
 
 
-def read_data():
-    df = pd.read_csv('../data/multi_class/train.csv')
+def read_data(randomize=False):
 
-    label_list = ["toxic", "severe_toxic", "obscene", 
+    df = pd.read_csv('../data/multi_class/train.csv')
+    label_list = ["toxic", "severe_toxic", "obscene",
                   "threat", "insult", "identity_hate"]
 
     input_ids = []
@@ -33,11 +34,16 @@ def read_data():
         input_text.append(row['comment_text'])
         input_labels.append(sample_labels)
 
+    if randomize:
+        zipped = list(zip(input_ids, input_text, input_labels))
+        random.shuffle(zipped)
+        input_ids, input_text, input_labels = zip(*zipped)
+
     return input_ids, input_text, input_labels, label_list
 
 
 def train_multilabel():
-    # Set flags
+
     base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
     name_of_config_json_file = "bert_config.json"
     name_of_vocab_file = "vocab.txt"
@@ -55,14 +61,14 @@ def train_multilabel():
         data_dir=data_dir)
 
     Flags.set_model_params(
-        batch_size_train=4,  # Move to .train() ?
-        max_seq_length=384,
-        num_train_epochs=4)
+        batch_size_train=8,  # Move to .train() ?
+        max_seq_length=256,
+        num_train_epochs=1)
 
     # Create new model
     FLAGS = Flags.get_handle()
 
-    input_ids, input_text, input_labels, label_list = read_data()
+    input_ids, input_text, input_labels, label_list = read_data(randomize=True)
 
     processor = DataProcessor(label_list=label_list)
     train_examples = processor.get_samples(
@@ -173,12 +179,8 @@ def predict_multilabel():
             writer.write(output_line)
 
 
-
 if __name__ == '__main__':
-    #read()
-    #train_multilabel()
-    #eval_multilabel()
-    predict_multilabel()
-
-
-    #tf.sigmoid([0, 1, 0, 1, 0, 0, 0])
+    # read_data()
+    # train_multilabel()
+    eval_multilabel()
+    # predict_multilabel()

@@ -661,7 +661,6 @@ class ClassifierModel(BaseModel):
         super().__init__(*args, **kwargs)
 
     def _init_estimator(self, train_samples):
-        #self._find_steps(train_samples)
         self._find_steps(train_samples)
 
         model_fn = model_fn_builder(
@@ -702,7 +701,7 @@ class ClassifierModel(BaseModel):
             is_training=True,
             drop_remainder=True)
 
-        self.estimator.train(input_fn=train_input_fn, 
+        self.estimator.train(input_fn=train_input_fn,
                              max_steps=self.num_train_steps)
 
     def eval(self, eval_samples, label_list):
@@ -719,14 +718,14 @@ class ClassifierModel(BaseModel):
         num_actual_eval_samples = len(eval_samples)
         if self.FLAGS.use_tpu:
             # TPU requires a fixed batch size for all batches, therefore the
-            # number of examples must be a multiple of the batch size, or else 
+            # number of examples must be a multiple of the batch size, or else
             # examples will get dropped. So we pad with fake examples which are
             # ignored later on. These do NOT count towards the metric (all
             # tf.metrics support a per-instance weight, and these get a weight
             # of 0.0).
             while len(eval_samples) % self.FLAGS.batch_size_eval != 0:
                 eval_samples.append(PaddingInputExample())
-            
+
             # However, if running eval on the TPU, you will need to specify the
             # number of steps.
             assert len(eval_samples) % self.FLAGS.batch_size_eval == 0
@@ -750,7 +749,7 @@ class ClassifierModel(BaseModel):
             is_training=False,
             drop_remainder=eval_drop_remainder)
 
-        results = self.estimator.evaluate(input_fn=eval_input_fn, 
+        results = self.estimator.evaluate(input_fn=eval_input_fn,
                                           steps=eval_steps)
         return results
 
@@ -772,10 +771,10 @@ class ClassifierModel(BaseModel):
             while len(predict_samples) % self.FLAGS.batch_size_predict != 0:
                 predict_samples.append(PaddingInputExample())
 
-        predict_file = os.path.join(self.FLAGS.bert_output_dir, 
+        predict_file = os.path.join(self.FLAGS.bert_output_dir,
                                     "predict.tf_record")
         file_based_convert_examples_to_features(predict_samples, label_list,
-                                                self.FLAGS.max_seq_length, 
+                                                self.FLAGS.max_seq_length,
                                                 self.tokenizer,
                                                 predict_file)
 
