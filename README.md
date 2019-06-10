@@ -45,16 +45,11 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   
 ### Core Components
 #### Configuring BERT
-* There are two main configurations that need to be done:
-  + 1) Paths to models and support files
-    + BERT Base model - the model downloaded from Google
-      + bert_config.json
-      + vocab.txt
-    + Output Directory
-      + Trained models are saved here
-      + Written predictions land here
-  + 2) Model Parameters
-    + sdsd
+**First, configure the model paths**
+  
+  base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"  # This is the path to the downloaded Base Model
+  name_of_config_json_file = "bert_config.json"  # This is inside the Base model folder
+  name_of_vocab_file = "vocab.txt"  # This is inside the base model folder
 
 
 
