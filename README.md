@@ -46,11 +46,12 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 ### Core Components
 #### Configuring BERT
 **First, configure the model paths**
-  
-  base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"  # This is the path to the downloaded Base Model
-  name_of_config_json_file = "bert_config.json"  # This is inside the Base model folder
-  name_of_vocab_file = "vocab.txt"  # This is inside the base model folder
 
+'''python  
+base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"  # This is the path to the downloaded Base Model
+name_of_config_json_file = "bert_config.json"  # This is inside the Base model folder
+name_of_vocab_file = "vocab.txt"  # This is inside the base model folder
+'''
 
 
 
