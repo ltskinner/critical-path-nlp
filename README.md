@@ -8,7 +8,7 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
 # Current Capabilities
 
-## BERT for SQuAD
+## BERT for Question Answering
 
 * Train and evaluate the SQuAD dataset
   + [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/)
