@@ -18,6 +18,6 @@ Adapted from:
 
 * Train and evaluate custom datasets for multi-label classification tasks
 * Example: 
-  +[The Google Toxic Comment Challange](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge)
+  + [The Google Toxic Comment Challange](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge)
 
 
