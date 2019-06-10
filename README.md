@@ -6,6 +6,7 @@ Rather, these are tools for rapid prototyping to figure out the best model in th
 
 Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
+
 # Current Capabilities
 
 ## BERT for Question Answering
@@ -28,4 +29,18 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   + [MNLI - Multi-Genre Natural Language Inference](https://www.nyu.edu/projects/bowman/multinli/)
   + etc...
   
+
+# Usage
+
+## Installation
+1. Clone repo (just for now - will be on pip soon)
+2. Download a pretrained [BERT model](https://github.com/google-research/bert#pre-trained-models)
+...Start with **BERT-Base Uncased** if youre not sure where to begin
+3. Unzip the model and make note of the path
+
+## critial-path-nlp usage
+
+
+
+
 
