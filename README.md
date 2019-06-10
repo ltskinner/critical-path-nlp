@@ -37,7 +37,12 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 2. Download a pretrained [BERT model](https://github.com/google-research/bert#pre-trained-models) - start with **BERT-Base Uncased** if youre not sure where to begin
 3. Unzip the model and make note of the path
 
-## critial-path-nlp usage
+## critial-path-nlp
+* Code examples can be found at:
+  + [SQuAD example](..blob/master/bert_squad_example.py)
+  + [Multi-Label Classification example](../blob/master/bert_multilabel_example.py)
+  + [Single-Label Classification example](../blob/master/bert_classifier_example.py)
+  
 
 
 
