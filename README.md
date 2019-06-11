@@ -21,13 +21,11 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 ## BERT for Multi-Label Classification
 
 * Train and evaluate custom datasets for multi-label classification tasks (multiple labels possible)
-* Examples:
   + [Kaggle - Google Toxic Comment Classification Challange](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge)
 
 ## BERT for Single-Label Classification
 
 * Train and evaluate custom datasets for single-label classification tasks (one label possible)
-* Examples:
   + [CoLA - Corpus of Linguistic Acceptability](https://nyu-mll.github.io/CoLA/)
   + [MPRC - Microsoft Research Paraphrase Corpus](http://nlpprogress.com/english/semantic_textual_similarity.html)
   + [MNLI - Multi-Genre Natural Language Inference](https://www.nyu.edu/projects/bowman/multinli/)
@@ -35,7 +33,7 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   
 
 # Examples
-* Code:
+* **Code:**
   + [SQuAD example](..blob/master/bert_squad_example.py)
   + [Multi-Label Classification example](../blob/master/bert_multilabel_example.py)
   + [Single-Label Classification example](../blob/master/bert_classifier_example.py)
