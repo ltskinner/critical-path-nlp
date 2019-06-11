@@ -21,7 +21,7 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 ### BERT for Question Answering
 
 * Train and evaluate the SQuAD dataset
-  + [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/)
+  + [SQuAD 2.0 - Stanford Question Answering Dataset](https://rajpurkar.github.io/SQuAD-explorer/)
   
 ### BERT for Multi-Label Classification
 
