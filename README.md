@@ -38,8 +38,6 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   
 ## Future Capabilities
 
-### BERT Word and Document Embeddings
-
 ### GPT-2 Training and Generation
   
 # Usage + Core Components
