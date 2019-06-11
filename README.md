@@ -129,7 +129,6 @@ For full batch size and sequence length guidelines see Google's [recommendations
 ```python
 
 """For Multi-Label Classification"""
-
 from critical_path.BERT.model_multilabel_class import MultiLabelClassifier
 
 model = MultiLabelClassifier(FLAGS)
