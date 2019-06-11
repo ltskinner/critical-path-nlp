@@ -13,9 +13,9 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
 # Examples
 * **Code:**
-  + [SQuAD example](../blob/master/bert_squad_example.py)
-  + [Multi-Label Classification example](../blob/master/bert_multilabel_example.py)
-  + [Single-Label Classification example](../blob/master/bert_classifier_example.py)
+  + [SQuAD example](../master/bert_squad_example.py)
+  + [Multi-Label Classification example](../master/bert_multilabel_example.py)
+  + [Single-Label Classification example](../master/bert_classifier_example.py)
 
 # Current Capabilities
 
@@ -59,9 +59,9 @@ output_directory = "../models/trained_BERT/" # Trained model and results landing
 
 #### Second, load your data source
 * SQuAD has dedicated dataloaders
-  + **read_squad_examples(), write_squad_predictions()** in [/BERT/model_squad](../blob/master/critical_path/BERT/model_squad.py)
+  + **read_squad_examples(), write_squad_predictions()** in [/BERT/model_squad](../master/critical_path/BERT/model_squad.py)
 * Multi-Label Classification has a generic dataloader
-  + **DataProcessor** in [/BERT/model_multilabel_class](../blob/master/critical_path/BERT/model_multilabel_class.py)
+  + **DataProcessor** in [/BERT/model_multilabel_class](../master/critical_path/BERT/model_multilabel_class.py)
     + **Note:** This requires data labels to be in string format
     + ```python
       labels = [
@@ -70,7 +70,7 @@ output_directory = "../models/trained_BERT/" # Trained model and results landing
       ]
       ```
 * Single-Label Classification dataloaders
-  + **ColaProcessor** is implemented in [/BERT/model_classifier](../blob/master/critical_path/BERT/model_classifier.py)
+  + **ColaProcessor** is implemented in [/BERT/model_classifier](../master/critical_path/BERT/model_classifier.py)
   + More dataloader formats have been done by [pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/examples/run_classifier.py)
   
 
