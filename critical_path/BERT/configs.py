@@ -287,5 +287,4 @@ class ConfigClassifier(ConfigBase):
 
     def validate_flags_or_throw(self,):
         """Validate the input FLAGS or throw an exception."""
-        FLAGS = self.flags.FLAGS
         ConfigBase.validate_flags_and_config(self)

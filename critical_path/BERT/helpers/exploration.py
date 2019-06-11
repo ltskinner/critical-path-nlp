@@ -2,7 +2,7 @@
 import os
 import tensorflow as tf
 
-BERT_FOLDER_PATH = "C:\\Users\\Angus\\models\\uncased_L-12_H-768_A-12"
+BERT_FOLDER_PATH = "../models/uncased_L-12_H-768_A-12"
 BERT_CONFIG_JSON = "bert_config.json"
 BERT_CKPT_NAME = "bert_model.ckpt"
 

@@ -50,7 +50,7 @@ def read_test_data():
     input_text = []
     input_labels = []
 
-    for _, row in df.head(25).iterrows():
+    for _, row in df.iterrows():
         input_ids.append(row['id'])
         input_text.append(row['comment_text'])
         input_labels.append([])
@@ -150,6 +150,8 @@ def bert_multilabel(do_train=False, do_eval=False, do_predict=False):
 
 if __name__ == '__main__':
 
-    bert_multilabel(do_train=False,
-                    do_eval=False,
-                    do_predict=True)
+    bert_multilabel(
+        do_train=False,
+        do_eval=False,
+        do_predict=True
+    )
