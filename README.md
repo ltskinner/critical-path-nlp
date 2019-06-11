@@ -96,9 +96,10 @@ null_score_diff_threshold = 0.0
 ```
 #### Initialize the configuration handler
 ```python
-from critical_path.BERT.configs import ConfigClassifier
-Flags = ConfigClassifier()
 
+from critical_path.BERT.configs import ConfigClassifier
+
+Flags = ConfigClassifier()
 Flags.set_model_paths(
     bert_config_file=base_model_folder_path + name_of_config_json_file,
     bert_vocab_file=base_model_folder_path + name_of_vocab_file,
@@ -128,7 +129,9 @@ For full batch size and sequence length guidelines see Google's [recommendations
 ```python
 
 """For Multi-Label Classification"""
+
 from critical_path.BERT.model_multilabel_class import MultiLabelClassifier
+
 model = MultiLabelClassifier(FLAGS)
 
 ```
