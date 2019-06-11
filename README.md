@@ -36,6 +36,11 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   + [MNLI - Multi-Genre Natural Language Inference](https://www.nyu.edu/projects/bowman/multinli/)
   + etc.
   
+## Future Capabilities
+
+### BERT for generating text embeddings
+
+### GPT-2 Training and Generation
   
 ## Core Components
 ### Configuring BERT
