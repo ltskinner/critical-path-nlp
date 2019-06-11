@@ -13,9 +13,9 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
 # Examples
 * **Code:**
-  + [SQuAD example](../master/bert_squad_example.py)
-  + [Multi-Label Classification example](../master/bert_multilabel_example.py)
-  + [Single-Label Classification example](../master/bert_classifier_example.py)
+  + **[SQuAD example]**(../master/bert_squad_example.py)
+  + **[Multi-Label Classification example]**(../master/bert_multilabel_example.py)
+  + **[Single-Label Classification example]**(../master/bert_classifier_example.py)
 
 ## Current Capabilities
 
@@ -151,6 +151,11 @@ from critical_path.BERT.model_multilabel_class import DataProcessor
 
 input_ids, input_text, input_labels, label_list = read_data(randomize=True)
 processor = DataProcessor(label_list=label_list)
+train_examples = processor.get_samples(
+        input_ids=input_ids,
+        input_text=input_text,
+        input_labels=input_labels,
+        set_type='train')
 
 ```
 
@@ -159,14 +164,17 @@ processor = DataProcessor(label_list=label_list)
 
 """Train and predict a Multi-Label Classifier"""
 
-train_examples = processor.get_samples(
-        input_ids=input_ids,
-        input_text=input_text,
-        input_labels=input_labels,
-        set_type='train')
-
-model.train(train_examples, label_list)
+if train:
+  model.train(train_examples, label_list)
+  
+if predict:
+  model.predict(predict_examples, label_list)
 
 ```
 
+# For full examples please see:
+* **Code:**
+  + **[SQuAD example]**(../master/bert_squad_example.py)
+  + **[Multi-Label Classification example]**(../master/bert_multilabel_example.py)
+  + **[Single-Label Classification example]**(../master/bert_classifier_example.py)
 
