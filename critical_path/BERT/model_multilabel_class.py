@@ -76,6 +76,18 @@ class DataProcessor(object):
                                      set_type)
 
     def _create_examples(self, input_ids, input_text, input_labels, set_type):
+        """Method for creating InputExamples from the dataset.
+
+        params:
+            input_ids = list[] of str() input ids
+            input_text = list[] of str() input text to classify
+            input_labels = list[] of list[] of str() classification names
+                --> [
+                    ["label_1", "label_2", "label_3"]
+                ]
+            set_type = str() of 'test', 'eval', 'train'
+                --> purely cosmetic
+        """
         # if set_type == 'test' --> labels = []
         examples = []
         for c, sample in enumerate(zip(input_ids, input_text, input_labels)):

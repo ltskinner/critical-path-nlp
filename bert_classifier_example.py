@@ -13,7 +13,7 @@ import tensorflow as tf
 import pandas as pd
 
 
-def read():
+def custom_reader():
     data_dir = "../data/class_data/"
 
     data = pd.read_csv(os.path.join(data_dir, "train.csv"))
@@ -26,7 +26,7 @@ def read():
     label_list = input_labels.value_counts()
 
     print(data.head())
-    
+
     processor = OneLabelColumnProcessor(label_list=label_list)
 
     training_examples = processor.get_train_examples(
@@ -35,13 +35,13 @@ def read():
         input_labels=input_labels)
 
 
-def train_classifier():
+def bert_classifier(do_train=False, do_eval=False, do_predict=False):
     # Set flags
     base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
     name_of_config_json_file = "bert_config.json"
     name_of_vocab_file = "vocab.txt"
     output_folder_path = base_model_folder_path + "class_model"
-    
+
     data_dir = '../data/class_data/cola_public/raw/'
 
     Flags = ConfigClassifier()
@@ -62,110 +62,50 @@ def train_classifier():
     FLAGS = Flags.get_handle()
     model = ClassifierModel(FLAGS)
 
-    processor = ColaProcessor()
-    train_samples = processor.get_train_examples(FLAGS.data_dir)
-    label_list = processor.get_labels()
+    if do_train:
+        processor = ColaProcessor()
+        train_samples = processor.get_train_examples(FLAGS.data_dir)
+        label_list = processor.get_labels()
 
-    model.train(train_samples, label_list)
+        model.train(train_samples, label_list)
 
+    if do_eval:
+        processor = ColaProcessor()
+        eval_examples = processor.get_dev_examples(FLAGS.data_dir)
+        label_list = processor.get_labels()
 
-def eval_classifier():
+        results = model.eval(eval_examples, label_list)
 
-    # Set flags
-    base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
-    name_of_config_json_file = "bert_config.json"
-    name_of_vocab_file = "vocab.txt"
-    output_folder_path = base_model_folder_path + "class_model"
-    
-    data_dir = '../data/class_data/cola_public/raw/'
+        output_eval_file = os.path.join(FLAGS.bert_output_dir,
+                                        "eval_results.txt")
+        with tf.gfile.GFile(output_eval_file, "w") as writer:
+            tf.logging.info("***** Eval results *****")
+            for key in sorted(results.keys()):
+                tf.logging.info("  %s = %s", key, str(results[key]))
 
-    Flags = ConfigClassifier()
-    # TODO: delete this handle from all configs
-    # Flags.set_task(do_train=True)
-    Flags.set_model_paths(
-        bert_config_file=base_model_folder_path + name_of_config_json_file,
-        bert_vocab_file=base_model_folder_path + name_of_vocab_file,
-        bert_output_dir=output_folder_path,
-        data_dir=data_dir)
+    if do_predict:
+        processor = ColaProcessor()
+        predict_examples = processor.get_test_examples(FLAGS.data_dir)
+        label_list = processor.get_labels()
 
-    Flags.set_model_params(
-        batch_size_eval=4,  # Note, need to move to .predict() ?
-        max_seq_length=384,
-        num_train_epochs=1)
+        results = model.predict(predict_examples, label_list)
 
-    # Create new model
-    FLAGS = Flags.get_handle()
-    model = ClassifierModel(FLAGS)
-
-    processor = ColaProcessor()
-    eval_examples = processor.get_dev_examples(FLAGS.data_dir)
-    label_list = processor.get_labels()
-
-    results = model.eval(eval_examples, label_list)
-
-    output_eval_file = os.path.join(FLAGS.bert_output_dir, "eval_results.txt")
-    with tf.gfile.GFile(output_eval_file, "w") as writer:
-        tf.logging.info("***** Eval results *****")
-        for key in sorted(results.keys()):
-            tf.logging.info("  %s = %s", key, str(results[key]))
-
-
-def predict_classifier():
-
-    # Set flags
-    base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
-    name_of_config_json_file = "bert_config.json"
-    name_of_vocab_file = "vocab.txt"
-    output_folder_path = base_model_folder_path + "class_model"
-    
-    data_dir = '../data/class_data/cola_public/raw/'
-
-    Flags = ConfigClassifier()
-    # TODO: delete this handle from all configs
-    # Flags.set_task(do_train=True)
-    Flags.set_model_paths(
-        bert_config_file=base_model_folder_path + name_of_config_json_file,
-        bert_vocab_file=base_model_folder_path + name_of_vocab_file,
-        bert_output_dir=output_folder_path,
-        data_dir=data_dir)
-
-    Flags.set_model_params(
-        batch_size_predict=4,  # not sure the difference bw this and eval
-        max_seq_length=384,
-        num_train_epochs=1)
-
-    # Create new model
-    FLAGS = Flags.get_handle()
-    model = ClassifierModel(FLAGS)
-
-    processor = ColaProcessor()
-    predict_examples = processor.get_test_examples(FLAGS.data_dir)
-    label_list = processor.get_labels()
-
-    results = model.predict(predict_examples, label_list)
-
-
-    # Actually write the results
-    # Basically, each column is the confidence for a label
-    output_predict_file = os.path.join(FLAGS.bert_output_dir, "test_results.tsv")
-    with tf.gfile.GFile(output_predict_file, "w") as writer:
-        tf.logging.info("***** Predict results *****")
-        for (i, prediction) in enumerate(results):
-            probabilities = prediction["probabilities"]
-            output_line = "\t".join(
-                str(class_probability)
-                for class_probability in probabilities) + "\n"
-            writer.write(output_line)
+        # Actually write the results
+        # Basically, each column is the confidence for a label
+        output_predict_file = os.path.join(FLAGS.bert_output_dir,
+                                           "test_results.tsv")
+        with tf.gfile.GFile(output_predict_file, "w") as writer:
+            tf.logging.info("***** Predict results *****")
+            for (i, prediction) in enumerate(results):
+                probabilities = prediction["probabilities"]
+                output_line = "\t".join(
+                    str(class_probability)
+                    for class_probability in probabilities) + "\n"
+                writer.write(output_line)
 
 
 if __name__ == "__main__":
-    #read()
-    #train_classifier()
-    #eval_classifier()
-    predict_classifier()
 
-    print("[!] uncouple .get_{}_examples()")
-    print("... convert to get_examples(file_path, 'dev')")
-    print("... use if 'dev' --> 'eval'")
-
-    print("Do example of making your own dataloading class")
+    bert_classifier(do_train=False,
+                    do_eval=False,
+                    do_predict=False)

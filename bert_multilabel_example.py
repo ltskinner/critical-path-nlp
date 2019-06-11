@@ -3,18 +3,16 @@
 import os
 
 from critical_path.BERT.configs import ConfigClassifier
-
-from critical_path.BERT.model_multilabel_class import DataProcessor
-from critical_path.BERT.model_multilabel_class import MultiLabelClassifier
-
-import critical_path.BERT.tokenization as tokenization
+from critical_path.BERT.model_multilabel_class import (
+    DataProcessor,
+    MultiLabelClassifier)
 
 import random
 import pandas as pd
 import tensorflow as tf
 
 
-def read_data(randomize=False):
+def read_toxic_data(randomize=False):
 
     df = pd.read_csv('../data/multi_class/train.csv')
     label_list = ["toxic", "severe_toxic", "obscene",
@@ -24,7 +22,7 @@ def read_data(randomize=False):
     input_text = []
     input_labels = []
 
-    for _, row in df.head(1000).iterrows():
+    for _, row in df.iterrows():
         sample_labels = []
         for label in label_list:
             if row[label] == 1:
@@ -42,18 +40,34 @@ def read_data(randomize=False):
     return input_ids, input_text, input_labels, label_list
 
 
-def train_multilabel():
+def read_test_data():
+
+    df = pd.read_csv('../data/multi_class/test.csv')
+    label_list = ["toxic", "severe_toxic", "obscene",
+                  "threat", "insult", "identity_hate"]
+
+    input_ids = []
+    input_text = []
+    input_labels = []
+
+    for _, row in df.head(25).iterrows():
+        input_ids.append(row['id'])
+        input_text.append(row['comment_text'])
+        input_labels.append([])
+
+    return input_ids, input_text, input_labels, label_list
+
+
+def bert_multilabel(do_train=False, do_eval=False, do_predict=False):
 
     base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
     name_of_config_json_file = "bert_config.json"
     name_of_vocab_file = "vocab.txt"
-    output_folder_path = base_model_folder_path + "/multi_class"
+    output_folder_path = base_model_folder_path + "/toxic_comment"
 
     data_dir = '../data/multi_class/'
 
     Flags = ConfigClassifier()
-    # TODO: delete this handle from all configs
-    # Flags.set_task(do_train=True)
     Flags.set_model_paths(
         bert_config_file=base_model_folder_path + name_of_config_json_file,
         bert_vocab_file=base_model_folder_path + name_of_vocab_file,
@@ -61,126 +75,81 @@ def train_multilabel():
         data_dir=data_dir)
 
     Flags.set_model_params(
-        batch_size_train=8,  # Move to .train() ?
+        batch_size_train=8,
         max_seq_length=256,
-        num_train_epochs=1)
+        num_train_epochs=3)
 
     # Create new model
     FLAGS = Flags.get_handle()
-
-    input_ids, input_text, input_labels, label_list = read_data(randomize=True)
-
-    processor = DataProcessor(label_list=label_list)
-    train_examples = processor.get_samples(
-        input_ids=input_ids,
-        input_text=input_text,
-        input_labels=input_labels,
-        set_type='train')
-
     model = MultiLabelClassifier(FLAGS)
 
-    model.train(train_examples, label_list)
+    if do_train:
+        # Load data
+        input_ids, input_text, input_labels, label_list = read_toxic_data(
+            randomize=True)
 
+        processor = DataProcessor(label_list=label_list)
+        train_examples = processor.get_samples(
+            input_ids=input_ids,
+            input_text=input_text,
+            input_labels=input_labels,
+            set_type='train')
 
-def eval_multilabel():
-    # Set flags
-    base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
-    name_of_config_json_file = "bert_config.json"
-    name_of_vocab_file = "vocab.txt"
-    output_folder_path = base_model_folder_path + "/multi_class"
+        model.train(train_examples, label_list)
 
-    data_dir = '../data/multi_class/'
+    if do_eval:
+        input_ids, input_text, input_labels, label_list = read_toxic_data()
 
-    Flags = ConfigClassifier()
-    # TODO: delete this handle from all configs
-    # Flags.set_task(do_train=True)
-    Flags.set_model_paths(
-        bert_config_file=base_model_folder_path + name_of_config_json_file,
-        bert_vocab_file=base_model_folder_path + name_of_vocab_file,
-        bert_output_dir=output_folder_path,
-        data_dir=data_dir)
+        processor = DataProcessor(label_list=label_list)
+        eval_examples = processor.get_samples(
+            input_ids=input_ids,
+            input_text=input_text,
+            input_labels=input_labels,
+            set_type='eval')
 
-    Flags.set_model_params(
-        batch_size_train=4,  # Move to .train() ?
-        max_seq_length=384,
-        num_train_epochs=4)
+        results = model.eval(eval_examples, label_list)
 
-    # Create new model
-    FLAGS = Flags.get_handle()
+        # Write results
+        output_eval_file = os.path.join(FLAGS.bert_output_dir,
+                                        "eval_results.txt")
+        with tf.gfile.GFile(output_eval_file, "w") as writer:
+            tf.logging.info("***** Eval results *****")
+            for key in sorted(results.keys()):
+                tf.logging.info("  %s = %s", key, str(results[key]))
 
-    input_ids, input_text, input_labels, label_list = read_data()
+    if do_predict:
+        input_ids, input_text, input_labels, label_list = read_test_data()
 
-    processor = DataProcessor(label_list=label_list)
-    eval_examples = processor.get_samples(
-        input_ids=input_ids,
-        input_text=input_text,
-        input_labels=input_labels,
-        set_type='eval')
+        processor = DataProcessor(label_list=label_list)
+        predict_examples = processor.get_samples(
+            input_ids=input_ids,
+            input_text=input_text,
+            input_labels=input_labels,
+            set_type='predict')
 
-    model = MultiLabelClassifier(FLAGS)
+        results = model.predict(predict_examples, label_list)
 
-    results = model.eval(eval_examples, label_list)
+        output = {k: [] for k in label_list}
+        output['id'] = []
 
-    output_eval_file = os.path.join(FLAGS.bert_output_dir, "eval_results.txt")
-    with tf.gfile.GFile(output_eval_file, "w") as writer:
-        tf.logging.info("***** Eval results *****")
-        for key in sorted(results.keys()):
-            tf.logging.info("  %s = %s", key, str(results[key]))
-
-
-def predict_multilabel():
-    # Set flags
-    base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
-    name_of_config_json_file = "bert_config.json"
-    name_of_vocab_file = "vocab.txt"
-    output_folder_path = base_model_folder_path + "/multi_class"
-
-    data_dir = '../data/multi_class/'
-
-    Flags = ConfigClassifier()
-    # TODO: delete this handle from all configs
-    # Flags.set_task(do_train=True)
-    Flags.set_model_paths(
-        bert_config_file=base_model_folder_path + name_of_config_json_file,
-        bert_vocab_file=base_model_folder_path + name_of_vocab_file,
-        bert_output_dir=output_folder_path,
-        data_dir=data_dir)
-
-    Flags.set_model_params(
-        batch_size_train=4,  # Move to .train() ?
-        max_seq_length=384,
-        num_train_epochs=4)
-
-    # Create new model
-    FLAGS = Flags.get_handle()
-
-    input_ids, input_text, input_labels, label_list = read_data()
-
-    processor = DataProcessor(label_list=label_list)
-    predict_examples = processor.get_samples(
-        input_ids=input_ids,
-        input_text=input_text,
-        input_labels=input_labels,
-        set_type='eval')
-
-    model = MultiLabelClassifier(FLAGS)
-
-    results = model.predict(predict_examples, label_list)
-    # Actually write the results
-    # Basically, each column is the confidence for a label
-    output_predict_file = os.path.join(FLAGS.bert_output_dir, "test_results.tsv")
-    with tf.gfile.GFile(output_predict_file, "w") as writer:
         tf.logging.info("***** Predict results *****")
         for (i, prediction) in enumerate(results):
+            if i % 10 == 0:
+                print(i, f'--> {(i/len(results))*100}%')
             probabilities = prediction["probabilities"]
-            output_line = "\t".join(
-                str(class_probability)
-                for class_probability in probabilities) + "\n"
-            writer.write(output_line)
+            output['id'].append(input_ids[i])
+            for l in range(len(probabilities)):
+                output[label_list[l]].append(probabilities[l])
+
+        res = pd.DataFrame(output)
+        res.to_csv('../data/multi_class/submission.csv',
+                   index=False,
+                   columns=["id", "toxic", "severe_toxic", "obscene",
+                            "threat", "insult", "identity_hate"])
 
 
 if __name__ == '__main__':
-    # read_data()
-    # train_multilabel()
-    eval_multilabel()
-    # predict_multilabel()
+
+    bert_multilabel(do_train=False,
+                    do_eval=False,
+                    do_predict=True)

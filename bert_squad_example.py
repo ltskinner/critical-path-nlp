@@ -18,7 +18,7 @@ from critical_path.BERT.model_squad import (
 import tensorflow as tf
 
 
-def bert_squad(train=False, predict=False):
+def bert_squad(do_train=False, do_predict=False):
     base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"
     name_of_config_json_file = "bert_config.json"
     name_of_vocab_file = "vocab.txt"
@@ -28,7 +28,7 @@ def bert_squad(train=False, predict=False):
     Flags.set_model_paths(
         bert_config_file=base_model_folder_path + name_of_config_json_file,
         bert_vocab_file=base_model_folder_path + name_of_vocab_file,
-        trained_model_dir=output_folder_path)
+        bert_output_dir=output_folder_path)
 
     Flags.set_model_params(batch_size_train=4,
                            max_seq_length=384,
@@ -40,7 +40,7 @@ def bert_squad(train=False, predict=False):
     FLAGS = Flags.get_handle()
     model = SQuADModel(FLAGS)
 
-    if train:
+    if do_train:
         squad_train_path = "../data/SQuAD_2.0/small-train-2.0.json"
         train_samples = read_squad_examples(
             input_file=squad_train_path,
@@ -49,7 +49,7 @@ def bert_squad(train=False, predict=False):
 
         model.train(train_samples)
 
-    if predict:
+    if do_predict:
         pred_file = "../data/SQuAD_2.0/small-train-2.0.json"
         eval_samples = read_squad_examples(
             input_file=pred_file,
@@ -72,5 +72,5 @@ def bert_squad(train=False, predict=False):
 
 
 if __name__ == '__main__':
-    bert_squad(train=True, predict=False)
-
+    bert_squad(do_train=True,
+               do_predict=False)
