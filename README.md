@@ -13,7 +13,7 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
 # Examples
 * **Code:**
-  + [SQuAD example](..blob/master/bert_squad_example.py)
+  + [SQuAD example](../blob/master/bert_squad_example.py)
   + [Multi-Label Classification example](../blob/master/bert_multilabel_example.py)
   + [Single-Label Classification example](../blob/master/bert_classifier_example.py)
 
