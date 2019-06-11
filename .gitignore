@@ -5,4 +5,4 @@
 /.vscode
 
 # Local helpers
-*/helpers/*
+helpers/
