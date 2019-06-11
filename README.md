@@ -7,7 +7,7 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
 # Installation
 1. Clone repo (just for now - will be on pip soon)
-2. Download a pretrained [BERT model](https://github.com/google-research/bert#pre-trained-models) - start with **BERT-Base Uncased** if youre not sure where to begin
+2. Download a pretrained [BERT model](https://github.com/google-research/bert#pre-trained-models) - start with **BERT-Base Uncased** if you're not sure where to begin
 3. Unzip the model and make note of the path
 
 # Examples
