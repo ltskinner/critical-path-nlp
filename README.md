@@ -124,7 +124,7 @@ For full batch size and sequence length guidelines see Google's [recommendations
 ```python
 
 """For Multi-Label Classification"""
-from critical_path.BERT.model_multilabel_class import
+from critical_path.BERT.model_multilabel_class import MultiLabelClassifier
 model = MultiLabelClassifier(FLAGS)
 
 ```
@@ -150,7 +150,9 @@ model = MultiLabelClassifier(FLAGS)
 """For Multi-Label Classification with a custom .csv reading function"""
 from critical_path.BERT.model_multilabel_class import DataProcessor
 
+# read_data is dataset specifc - see /bert_multilabel_example.py
 input_ids, input_text, input_labels, label_list = read_data(randomize=True)
+
 processor = DataProcessor(label_list=label_list)
 train_examples = processor.get_samples(
         input_ids=input_ids,
