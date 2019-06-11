@@ -35,7 +35,7 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   + [CoLA - Corpus of Linguistic Acceptability](https://nyu-mll.github.io/CoLA/)
   + [MPRC - Microsoft Research Paraphrase Corpus](http://nlpprogress.com/english/semantic_textual_similarity.html)
   + [MNLI - Multi-Genre Natural Language Inference](https://www.nyu.edu/projects/bowman/multinli/)
-  + etc...
+  + etc.
   
   
 ## Core Components
