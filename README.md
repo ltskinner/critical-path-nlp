@@ -38,7 +38,7 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   
 ## Future Capabilities
 
-### BERT for generating text embeddings
+### BERT Word and Document Embeddings
 
 ### GPT-2 Training and Generation
   
