@@ -70,7 +70,8 @@ output_directory = "../models/trained_BERT/" # Trained model and results landing
     + **Note:** This requires data labels to be in string format
     + ```python
       labels = [
-      ["label_1", "label_2", "label_3"]
+          ["label_1", "label_2", "label_3"],
+          ["label_2"]
       ]
       ```
 * Single-Label Classification dataloaders
