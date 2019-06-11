@@ -1,7 +1,7 @@
 # critical-path-nlp
 Tools for adapting universal language models to specifc tasks
 
-Please note these tools are for rapid prototyping - not brute force hyperparameter tuning.
+Please note these are tools for rapid prototyping - not brute force hyperparameter tuning.
 
 Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
