@@ -46,16 +46,87 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 ```python  
 
 base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"  # Folder containing downloaded Base Model
-name_of_config_json_file = "bert_config.json"  # Inside the Base Model folder
-name_of_vocab_file = "vocab.txt"  # Inside the Base Model folder
+name_of_config_json_file = "bert_config.json"  # Located inside the Base Model folder
+name_of_vocab_file = "vocab.txt"  # Located inside the Base Model folder
 
 output_directory = "../models/trained_BERT/" # Trained model and results landing folder
+
+# Multi-Label and Single-Label Specific
+data_dir=None  # Directory .tsv data is stored in - typically for CoLA/MPRC or other datasets with known structure
+
 ```
 
 #### Second, define the model run parameters
 
+```python
+
+"""Settable parameters and their default values
+
+Note: Most default values are perfectly fine
+"""
+
+# Administrative
+init_checkpoint=None
+save_checkpoints_steps=1000
+iterations_per_loop=1000
+do_lower_case=True   
+
+# Technical
+batch_size_train = 32
+batch_size_eval = 8
+batch_size_predict = 8
+num_train_epochs = 3.0
+max_seq_length = 128
+warmup_proportion = 0.1
+learning_rate = 3e-5
+
+# SQuAD Specific
+doc_stride = 128
+max_query_length = 64
+n_best_size = 20
+max_answer_length = 30
+is_squad_v2 = False  # SQuAD 2.0 has examples with no answer, aka "impossible", SQuAD 1.0 does not
+verbose_logging = False
+null_score_diff_threshold = 0.0
+
+```
+#### Initialize the configuration handler
+```python
+from critical_path.BERT.configs import ConfigClassifier
+Flags = ConfigClassifier()
+
+Flags.set_model_paths(
+    bert_config_file=base_model_folder_path + name_of_config_json_file,
+    bert_vocab_file=base_model_folder_path + name_of_vocab_file,
+    bert_output_dir=output_folder_path,
+    data_dir=data_dir)
+
+Flags.set_model_params(
+    batch_size_train=8, 
+    max_seq_length=256,
+    num_train_epochs=3)
+
+# Retrieve a handle for the configs
+FLAGS = Flags.get_handle()
+```
+
+For full batch size and sequence length guidelines see Google's [recommendations](https://github.com/google-research/bert#out-of-memory-issues)
+**A single 1070GTX using BERT-Base Uncased can handle**
+| Model             | max_seq_len | batch_size |
+| ----------------- |:-----------:| ----------:|
+| BERT-Base Uncased |     256     |      6     |
+|        ...        |     384     |      4     |
+
+
 ### Using Configured Model
 #### First, create a new model with the configured parameters
+```python
+
+"""For Multi-Label Classification"""
+from critical_path.BERT.model_multilabel_class import
+model = MultiLabelClassifier(FLAGS)
+
+```
 
 #### Second, load your data source
 * SQuAD has dedicated dataloaders
@@ -73,6 +144,29 @@ output_directory = "../models/trained_BERT/" # Trained model and results landing
   + **ColaProcessor** is implemented in [/BERT/model_classifier](../master/critical_path/BERT/model_classifier.py)
   + More dataloader formats have been done by [pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/examples/run_classifier.py)
   
+```python
 
+"""For Multi-Label Classification with a custom .csv reading function"""
+from critical_path.BERT.model_multilabel_class import DataProcessor
+
+input_ids, input_text, input_labels, label_list = read_data(randomize=True)
+processor = DataProcessor(label_list=label_list)
+
+```
+
+#### Third, run your task
+```python
+
+"""Train and predict a Multi-Label Classifier"""
+
+train_examples = processor.get_samples(
+        input_ids=input_ids,
+        input_text=input_text,
+        input_labels=input_labels,
+        set_type='train')
+
+model.train(train_examples, label_list)
+
+```
 
 
