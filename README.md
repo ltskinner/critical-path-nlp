@@ -6,6 +6,10 @@ Rather, these are tools for rapid prototyping to figure out the best model in th
 
 Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
+# Installation
+1. Clone repo (just for now - will be on pip soon)
+2. Download a pretrained [BERT model](https://github.com/google-research/bert#pre-trained-models) - start with **BERT-Base Uncased** if youre not sure where to begin
+3. Unzip the model and make note of the path
 
 # Current Capabilities
 
@@ -30,22 +34,15 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   + etc...
   
 
-# Usage
-
-## Installation
-1. Clone repo (just for now - will be on pip soon)
-2. Download a pretrained [BERT model](https://github.com/google-research/bert#pre-trained-models) - start with **BERT-Base Uncased** if youre not sure where to begin
-3. Unzip the model and make note of the path
-
-## Examples
+# Examples
 * Code:
   + [SQuAD example](..blob/master/bert_squad_example.py)
   + [Multi-Label Classification example](../blob/master/bert_multilabel_example.py)
   + [Single-Label Classification example](../blob/master/bert_classifier_example.py)
   
-### Core Components
-#### Configuring BERT
-##### First, define the model paths
+## Core Components
+### Configuring BERT
+#### First, define the model paths
 
 
 ```python  
@@ -57,12 +54,12 @@ name_of_vocab_file = "vocab.txt"  # Inside the Base Model folder
 output_directory = "../models/trained_BERT/" # Trained model and results landing folder
 ```
 
-##### Second, define the model run parameters
+#### Second, define the model run parameters
 
-#### Using Configured Model
-##### First, create a new model with the configured parameters**
+### Using Configured Model
+#### First, create a new model with the configured parameters**
 
-##### Second, load your data source
+#### Second, load your data source
 * SQuAD has dedicated dataloaders
   + **read_squad_examples(), write_squad_predictions()** in [/BERT/model_squad](../blob/master/critical_path/BERT/model_squad.py)
 * Multi-Label Classification has a generic dataloader
