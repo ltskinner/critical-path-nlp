@@ -45,13 +45,38 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   
 ### Core Components
 #### Configuring BERT
-**First, configure the model paths**
+**First, define the model paths**
+
 
 ```python  
-base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"  # This is the path to the downloaded Base Model
-name_of_config_json_file = "bert_config.json"  # This is inside the Base model folder
-name_of_vocab_file = "vocab.txt"  # This is inside the base model folder
+"""
+base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"  # Folder containing downloaded Base Model
+name_of_config_json_file = "bert_config.json"  # Inside the Base Model folder
+name_of_vocab_file = "vocab.txt"  # Inside the Base Model folder
+
+output_directory = "../models/trained_BERT/" # Trained model and results landing folder
 ```
+
+**Second, define the model run parameters**
+
+# Using Configured Model
+**First, create a new model with the configured parameters**
+
+**Second, load your data source**
+* SQuAD has dedicated dataloaders
+  + read_squad_examples(), write_squad_predictions() in [model_squad](../blob/master/critical_path/BERT/model_squad.py)
+* Multi-Label Classification has a generic dataloader
+  + DataProcessor in [model_multilabel_class](../blob/master/critical_path/BERT/model_multilabel_class.py)
+    + **Note:** This requires data labels to be in string format
+    + ```python
+    labels = [
+      ["label_1", "label_2", "label_3"]
+     ]
+     ```
+* Single-Label Classification dataloaders
+  + ColaProcessor is implemented in [model_classifier](../blob/master/critical_path/BERT/model_classifier.py)
+  + More dataloader formats can be found in [pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/examples/run_classifier.py)
+  
 
 
 
