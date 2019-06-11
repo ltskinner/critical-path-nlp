@@ -11,6 +11,12 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 2. Download a pretrained [BERT model](https://github.com/google-research/bert#pre-trained-models) - start with **BERT-Base Uncased** if youre not sure where to begin
 3. Unzip the model and make note of the path
 
+# Examples
+* **Code:**
+  + [SQuAD example](..blob/master/bert_squad_example.py)
+  + [Multi-Label Classification example](../blob/master/bert_multilabel_example.py)
+  + [Single-Label Classification example](../blob/master/bert_classifier_example.py)
+
 # Current Capabilities
 
 ## BERT for Question Answering
@@ -31,12 +37,6 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   + [MNLI - Multi-Genre Natural Language Inference](https://www.nyu.edu/projects/bowman/multinli/)
   + etc...
   
-
-# Examples
-* **Code:**
-  + [SQuAD example](..blob/master/bert_squad_example.py)
-  + [Multi-Label Classification example](../blob/master/bert_multilabel_example.py)
-  + [Single-Label Classification example](../blob/master/bert_classifier_example.py)
   
 ## Core Components
 ### Configuring BERT
