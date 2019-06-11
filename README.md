@@ -55,7 +55,7 @@ output_directory = "../models/trained_BERT/" # Trained model and results landing
 #### Second, define the model run parameters
 
 ### Using Configured Model
-#### First, create a new model with the configured parameters**
+#### First, create a new model with the configured parameters
 
 #### Second, load your data source
 * SQuAD has dedicated dataloaders
