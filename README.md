@@ -45,11 +45,11 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   
 ### Core Components
 #### Configuring BERT
-**First, define the model paths**
+##### First, define the model paths
 
 
 ```python  
-"""
+
 base_model_folder_path = "../models/uncased_L-12_H-768_A-12/"  # Folder containing downloaded Base Model
 name_of_config_json_file = "bert_config.json"  # Inside the Base Model folder
 name_of_vocab_file = "vocab.txt"  # Inside the Base Model folder
@@ -57,16 +57,16 @@ name_of_vocab_file = "vocab.txt"  # Inside the Base Model folder
 output_directory = "../models/trained_BERT/" # Trained model and results landing folder
 ```
 
-**Second, define the model run parameters**
+##### Second, define the model run parameters
 
-# Using Configured Model
-**First, create a new model with the configured parameters**
+#### Using Configured Model
+##### First, create a new model with the configured parameters**
 
-**Second, load your data source**
+##### Second, load your data source
 * SQuAD has dedicated dataloaders
-  + read_squad_examples(), write_squad_predictions() in [/BERT/model_squad](../blob/master/critical_path/BERT/model_squad.py)
+  + **read_squad_examples(), write_squad_predictions()** in [/BERT/model_squad](../blob/master/critical_path/BERT/model_squad.py)
 * Multi-Label Classification has a generic dataloader
-  + DataProcessor in [/BERT/model_multilabel_class](../blob/master/critical_path/BERT/model_multilabel_class.py)
+  + **DataProcessor** in [/BERT/model_multilabel_class](../blob/master/critical_path/BERT/model_multilabel_class.py)
     + **Note:** This requires data labels to be in string format
     + ```python
       labels = [
@@ -75,7 +75,7 @@ output_directory = "../models/trained_BERT/" # Trained model and results landing
       ]
       ```
 * Single-Label Classification dataloaders
-  + ColaProcessor is implemented in [/BERT/model_classifier](../blob/master/critical_path/BERT/model_classifier.py)
+  + **ColaProcessor** is implemented in [/BERT/model_classifier](../blob/master/critical_path/BERT/model_classifier.py)
   + More dataloader formats have been done by [pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/examples/run_classifier.py)
   
 
