@@ -171,10 +171,10 @@ train_examples = processor.get_samples(
 
 """Train and predict a Multi-Label Classifier"""
 
-if train:
+if do_train:
   model.train(train_examples, label_list)
   
-if predict:
+if do_predict:
   model.predict(predict_examples, label_list)
 
 ```
