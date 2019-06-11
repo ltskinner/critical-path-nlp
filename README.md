@@ -42,7 +42,7 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
 ### GPT-2 Training and Generation
   
-## Core Components
+# Usage + Core Components
 ### Configuring BERT
 #### First, define the model paths
 
