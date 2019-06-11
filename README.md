@@ -11,7 +11,7 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
 3. Unzip the model and make note of the path
 
 # Examples
-* **Code:**
+* **Full implementation examples can be found here:**
   + [**SQuAD example**](../master/bert_squad_example.py)
   + [**Multi-Label Classification example**](../master/bert_multilabel_example.py)
   + [**Single-Label Classification example**](../master/bert_classifier_example.py)
@@ -180,7 +180,7 @@ if do_predict:
 ```
 
 # For full examples please see:
-* **Code:**
+* **Full implementations:**
   + [**SQuAD example**](../master/bert_squad_example.py)
   + [**Multi-Label Classification example**](../master/bert_multilabel_example.py)
   + [**Single-Label Classification example**](../master/bert_classifier_example.py)
