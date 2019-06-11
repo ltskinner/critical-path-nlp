@@ -64,18 +64,18 @@ output_directory = "../models/trained_BERT/" # Trained model and results landing
 
 **Second, load your data source**
 * SQuAD has dedicated dataloaders
-  + read_squad_examples(), write_squad_predictions() in [model_squad](../blob/master/critical_path/BERT/model_squad.py)
+  + read_squad_examples(), write_squad_predictions() in [/BERT/model_squad](../blob/master/critical_path/BERT/model_squad.py)
 * Multi-Label Classification has a generic dataloader
-  + DataProcessor in [model_multilabel_class](../blob/master/critical_path/BERT/model_multilabel_class.py)
+  + DataProcessor in [/BERT/model_multilabel_class](../blob/master/critical_path/BERT/model_multilabel_class.py)
     + **Note:** This requires data labels to be in string format
     + ```python
-    labels = [
+      labels = [
       ["label_1", "label_2", "label_3"]
-     ]
-     ```
+      ]
+      ```
 * Single-Label Classification dataloaders
-  + ColaProcessor is implemented in [model_classifier](../blob/master/critical_path/BERT/model_classifier.py)
-  + More dataloader formats can be found in [pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/examples/run_classifier.py)
+  + ColaProcessor is implemented in [/BERT/model_classifier](../blob/master/critical_path/BERT/model_classifier.py)
+  + More dataloader formats have been done by [pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/examples/run_classifier.py)
   
 
 
