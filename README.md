@@ -110,7 +110,6 @@ Flags.set_model_params(
 FLAGS = Flags.get_handle()
 ```
 
-For full batch size and sequence length guidelines see Google's [recommendations](https://github.com/google-research/bert#out-of-memory-issues)
 **A single 1070GTX using BERT-Base Uncased can handle**
 
 | Model             | max_seq_len | batch_size |
@@ -118,6 +117,7 @@ For full batch size and sequence length guidelines see Google's [recommendations
 | BERT-Base Uncased |     256     |      6     |
 |        ...        |     384     |      4     |
 
+For full batch size and sequence length guidelines see Google's [recommendations](https://github.com/google-research/bert#out-of-memory-issues)
 
 ### Using Configured Model
 #### First, create a new model with the configured parameters
