@@ -52,7 +52,7 @@ name_of_vocab_file = "vocab.txt"  # Located inside the Base Model folder
 output_directory = "../models/trained_BERT/" # Trained model and results landing folder
 
 # Multi-Label and Single-Label Specific
-data_dir=None  # Directory .tsv data is stored in - typically for CoLA/MPRC or other datasets with known structure
+data_dir = None  # Directory .tsv data is stored in - typically for CoLA/MPRC or other datasets with known structure
 
 ```
 
@@ -66,10 +66,10 @@ Note: Most default values are perfectly fine
 """
 
 # Administrative
-init_checkpoint=None
-save_checkpoints_steps=1000
-iterations_per_loop=1000
-do_lower_case=True   
+init_checkpoint = None
+save_checkpoints_steps = 1000
+iterations_per_loop = 1000
+do_lower_case = True   
 
 # Technical
 batch_size_train = 32
