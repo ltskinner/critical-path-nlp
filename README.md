@@ -17,19 +17,19 @@ Adapted from: [Google's BERT](https://github.com/google-research/bert)
   + [Multi-Label Classification example](../master/bert_multilabel_example.py)
   + [Single-Label Classification example](../master/bert_classifier_example.py)
 
-# Current Capabilities
+## Current Capabilities
 
-## BERT for Question Answering
+### BERT for Question Answering
 
 * Train and evaluate the SQuAD dataset
   + [SQuAD 2.0](https://rajpurkar.github.io/SQuAD-explorer/)
   
-## BERT for Multi-Label Classification
+### BERT for Multi-Label Classification
 
 * Train and evaluate custom datasets for multi-label classification tasks (multiple labels possible)
   + [Kaggle - Google Toxic Comment Classification Challange](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge)
 
-## BERT for Single-Label Classification
+### BERT for Single-Label Classification
 
 * Train and evaluate custom datasets for single-label classification tasks (one label possible)
   + [CoLA - Corpus of Linguistic Acceptability](https://nyu-mll.github.io/CoLA/)
