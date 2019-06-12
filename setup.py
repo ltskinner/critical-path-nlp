@@ -6,7 +6,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='critical_path',
-      version='0.0.7',
+      version='0.0.9',
       description='Tools for adapting universal language models to specifc tasks',
       long_description=long_description,
       long_description_content_type='text/markdown',
