@@ -6,7 +6,10 @@ Please note these are tools for rapid prototyping - not brute force hyperparamet
 Adapted from: [Google's BERT](https://github.com/google-research/bert)
 
 # Installation
-1.    pip install critical_path
+1. 
+
+    pip install critical_path
+
 2. Download a pretrained [BERT model](https://github.com/google-research/bert#pre-trained-models) - start with **BERT-Base Uncased** if you're not sure where to begin
 3. Unzip the model and make note of the path
 
