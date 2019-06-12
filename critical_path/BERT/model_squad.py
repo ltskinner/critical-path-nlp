@@ -30,9 +30,6 @@ from critical_path.BERT.modeling import BertConfig, BaseModel
 import six
 import tensorflow as tf
 
-print("[!] Importing squad_data, may need to pass 'FLAGS' for access to")
-print("... FLAGS.is_squad_v2, among other flags.")
-
 
 class SquadExample(object):
     """A single training/test example for simple sequence classification.
